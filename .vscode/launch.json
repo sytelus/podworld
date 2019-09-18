@@ -8,7 +8,7 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/tests/play_game.py",
+            "program": "${workspaceFolder}/boxworld/main.py",
             "console": "integratedTerminal"
         }
     ]
