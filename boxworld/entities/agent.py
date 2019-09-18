@@ -1,15 +1,15 @@
 # TODO: replace by import of all sensors
-from sensors.bump_sensor import BumpSensor
-from sensors.proximity_sensor import ProximitySensor
-from sensors.rgb_sensor import RgbSensor
-from sensors.rgbFog_sensor import RgbFogSensor
-from sensors.topview_sensor import TopviewSensor
-from sensors.smell_sensor import SmellSensor
-from sensors.overview_sensor import OverviewSensor
+from ..sensors.bump_sensor import BumpSensor
+from ..sensors.proximity_sensor import ProximitySensor
+from ..sensors.rgb_sensor import RgbSensor
+from ..sensors.rgbFog_sensor import RgbFogSensor
+from ..sensors.topview_sensor import TopviewSensor
+from ..sensors.smell_sensor import SmellSensor
+from ..sensors.overview_sensor import OverviewSensor
 
-from entities.entity import Entity
+from .entity import Entity
 
-from utils.pygame_util import to_pygame
+from ..utils.pygame_util import to_pygame
 
 import numpy as np
 import pymunk

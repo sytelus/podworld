@@ -1,4 +1,4 @@
-from sensors.sensor import Sensor
+from .sensor import Sensor
 from matplotlib import pyplot as plt
 import numpy as np
 import numpy as np
@@ -8,10 +8,10 @@ import cv2
 import math
 import time
 
-class ProximitySensor(Sensor):
+class RgbFogSensor(Sensor):
 
     def __init__(self, **kwargs):
-        super(ProximitySensor, self).__init__(**kwargs)
+        super(RgbFogSensor, self).__init__(**kwargs)
 
     def get_sensory_input(self, env):
         
@@ -40,15 +40,18 @@ class ProximitySensor(Sensor):
         
         # Get value sensor
         mask = resized_img != 0
-        sensor = np.min( np.where(mask.any(axis=1), mask.argmax(axis=1), resized_img.shape[1] - 1), axis = 1)
+        sensor_ind = np.min( np.where(mask.any(axis=1), mask.argmax(axis=1), resized_img.shape[1] - 1), axis = 1)
         
-        sensor= (resized_img.shape[1] - sensor ) / resized_img.shape[1]
+        fog = 1.0*(resized_img.shape[1] - sensor_ind ) / resized_img.shape[1]
+        sensor = resized_img[ np.arange( int(self.fovResolution)),  sensor_ind   ,:]
         
+        sensor[:,0] = sensor[:,0]*fog
+        sensor[:,1] = sensor[:,1]*fog
+        sensor[:,2] = sensor[:,2]*fog
+      
         if self.display:
             self.update_display(env, sensor)
 
-        #print( env.agent.state )
-        #print(self.nameSensor)
         #env.agent.state[self.nameSensor] = sensor
         
         return sensor
@@ -65,9 +68,8 @@ class ProximitySensor(Sensor):
             plt.show(block=False)
 
         for j in range(height):
-            self.matrix[j, :, 0] = image[:]
-            self.matrix[j, :, 1] = image[:]
-            self.matrix[j, :, 2] = image[:]
+            self.matrix[j, :, :] = image[:,:]/255.0
+            
         
         self.figure.set_data(self.matrix)
         plt.pause(.0001)

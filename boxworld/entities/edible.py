@@ -1,6 +1,6 @@
-from entities.entity import Entity
+from .entity import Entity
 
-from utils.pygame_util import to_pygame
+from ..utils.pygame_util import to_pygame
 
 import pymunk
 import pygame

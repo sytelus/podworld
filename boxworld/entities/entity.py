@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from utils.texture import UniformTexture, NormalTexture, ColorTexture, StripesTexture, PolarStripesTexture
+from ..utils.texture import UniformTexture, NormalTexture, ColorTexture, StripesTexture, PolarStripesTexture
 import numpy.random as rand
 import math
 

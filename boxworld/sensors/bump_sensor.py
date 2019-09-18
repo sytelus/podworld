@@ -1,4 +1,4 @@
-from sensors.sensor import Sensor
+from .sensor import Sensor
 from matplotlib import pyplot as plt
 import numpy as np
 

@@ -15,7 +15,7 @@ import pygame
 import sys
 
 import shapely.geometry as geo
-from utils.texture import *
+from ..utils.texture import *
 
 CORRIDOR_SIZE = 25
 MAX_ROOM_SIZE = 300

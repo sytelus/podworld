@@ -5,12 +5,12 @@ from pygame.color import THECOLORS
 
 import pymunk
 
-from entities.agent import Agent
-from entities.edible import Edible
-from entities.obstacle import Obstacle
+from .entities.agent import Agent
+from .entities.edible import Edible
+from .entities.obstacle import Obstacle
 from PIL import Image
 
-from maps.map import Dungeons
+from .maps.map import Dungeons
 
 import numpy as np
 
@@ -49,7 +49,7 @@ class Env(object):
         # Save the arguments for reset
         self.parameters = kwargs
 
-        if not kwargs['map']:
+        if 'map' not in kwargs:
             self.mapp_ = False
 
         self.done = False
@@ -119,13 +119,13 @@ class Env(object):
         ]
 
         # Add obstacles
-        if not kwargs['map']:
+        if 'map' not in kwargs:
             for obstacle_params in kwargs['obstacles']:
                 obstacle_params['environment'] = self
                 obstacle = Obstacle(**obstacle_params)
                 self.obstacles.append(obstacle)
 
-        if kwargs['map']:
+        if 'map' not in kwargs:
             #create map object and check for connectivity
             self.mapp_ = Dungeons(space_size=(self.width, self.height), n_rooms=kwargs['n_rooms'])
             while not self.mapp_.topology.geom_type == 'Polygon':
@@ -168,7 +168,7 @@ class Env(object):
         self.poison_params['collision_type'] = 3
         if self.poison_params['positions'] == 'random':
             positions = ['random'] * self.poison_params['number']
-            if kwargs['map']:
+            if 'map' not in kwargs:
                 positions = self.mapp_.generate_random_point(self.poison_params['number'])
         else:
             positions = self.poison_params['positions']
@@ -186,7 +186,7 @@ class Env(object):
         self.fruit_params['collision_type'] = 2
         if self.fruit_params['positions'] == 'random':
             positions = ['random'] * self.fruit_params['number']
-            if kwargs['map']:
+            if 'map' not in kwargs:
                 positions = self.mapp_.generate_random_point(self.fruit_params['number'])
         else:
             positions = self.fruit_params['positions']
@@ -199,7 +199,7 @@ class Env(object):
 
         # Add the agent
         self.agent_param = kwargs['agent'].copy()
-        if kwargs['map']:
+        if 'map' not in kwargs:
             self.agent_param['position'] = self.mapp_.generate_random_point()[-1]
         #print(self.agent_param['position'])
         self.agent = Agent(environment=self, **self.agent_param )
@@ -247,22 +247,23 @@ class Env(object):
         # Draw the agent
         self.agent.draw()
 
-        data = pygame.image.tostring(self.screen, 'RGB')
-        pil_image = Image.frombytes('RGB', (self.width, self.height), data)
-        import os, os.path
-        self.iter = len([name for name in os.listdir('images/')])
-        image = np.asarray(pil_image.convert('RGB'))[10:74,10:74,:]
-        image.setflags(write=1)
-        """im_final = []
-        for i in range(len(image)):
-            if sum(image[i])!=0:"""
-        pil_image = Image.fromarray(image)
-        #print(image,'here')
-        if np.all(image==0):
-            #print('yo')
-            pass
-        else:
-            pil_image.save('images/'+str(self.iter+1)+'.png')
+        # data = pygame.image.tostring(self.screen, 'RGB')
+        # pil_image = Image.frombytes('RGB', (self.width, self.height), data)
+        # import os, os.path
+        # self.iter = len([name for name in os.listdir('images/')])
+        # image = np.asarray(pil_image.convert('RGB'))[10:74,10:74,:]
+        # image.setflags(write=1)
+        # """im_final = []
+        # for i in range(len(image)):
+        #     if sum(image[i])!=0:"""
+        # pil_image = Image.fromarray(image)
+        # #print(image,'here')
+        # if np.all(image==0):
+        #     #print('yo')
+        #     pass
+        # else:
+        #     pil_image.save('images/'+str(self.iter+1)+'.png')
+
         # Update the display
         if self.display:
             pygame.display.flip()
