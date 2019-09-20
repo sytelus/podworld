@@ -24,6 +24,6 @@ setuptools.setup(
     ),
     include_package_data=True,
     install_requires=[
-          'pymunk', 'pygame', 'numpy', 'Shapely', 'matplotlib', 'Pillow', 'opencv-python', 'gym'
+          'pymunk', 'pygame', 'numpy', 'matplotlib', 'Pillow', 'opencv-python', 'gym'
     ]
 )
