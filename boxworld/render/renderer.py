@@ -65,7 +65,7 @@ class Renderer:
             for i in range(last_observation.shape[1]):
                 color = tuple(last_observation[0, i])
                 self.screen.fill(color, 
-                            pygame.rect.Rect(i*obs_width, 0, obs_width, self.info_height))
+                            pygame.rect.Rect(i*obs_width, 0, obs_width, obs_height))
 
     def _draw_world(self, world:World)->None:
         self.screen.fill(world.color)
