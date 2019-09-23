@@ -19,7 +19,7 @@ class BoxWorldEnv(gym.Env):
     def __init__(self, food_count=10, obs_count=30, xmax=2560, ymax=1440, seed=42,
         box_size=(40, 40), circle_radius=30, box_mass=1, circle_mass=1,
         bar_count=4, bar_size=(900,40), bar_mass=10,
-        agent_radius=40, agent_mass=100, agent_obs_length=400)->None:
+        agent_radius=40, agent_mass=100, agent_obs_length=400, agent_ray_count=64)->None:
 
         np.random.seed(seed)
         random.seed(seed)
@@ -28,19 +28,21 @@ class BoxWorldEnv(gym.Env):
         self.box_size, self.circle_radius, self.box_mass, self.circle_mass = box_size, circle_radius, box_mass, circle_mass
         self.bar_count, self.bar_size, self.bar_mass = bar_count, bar_size, bar_mass
         self.agent_radius, self.agent_mass, self.agent_obs_length = agent_radius, agent_mass, agent_obs_length
+        self.agent_ray_count = agent_ray_count
 
-        self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Box(low=0, high=255, shape=(1, 8, 3), dtype=np.uint8)
+        self.action_space = spaces.Discrete(4)
+        self.observation_space = spaces.Box(low=0, high=255, shape=(1, agent_ray_count, 3), dtype=np.uint8)
 
         self._obs_local_pts = list(self._get_obs_local_pts())
         self._agent_mask = 0b1
+        self.last_observation = None
 
         self.renderer = Renderer()
 
     def _get_obs_local_pts(self)->Iterator[Tuple[float, float]]:
         start = 0
         step = 2 * math.pi / self.observation_space.shape[1]
-        for i in range(self.action_space.n):
+        for i in range(self.observation_space.shape[1]):
             angle = start + step * i
             yield math.cos(angle) * self.agent_obs_length, math.sin(angle) * self.agent_obs_length
 
@@ -48,10 +50,10 @@ class BoxWorldEnv(gym.Env):
         return random.randint(clearance, self.xmax-clearance), random.randint(clearance, self.ymax-clearance)
 
     def step(self, action):
-        self.world.step()
+        self.world.step(1.0/self.renderer.human_mode_fps)
         observations = list(self.world.get_observations(self.agent, self._obs_local_pts, self._agent_filter))
-        observations =  np.expand_dims(np.array(observations, dtype=np.uint8), axis=0)
-        return observations, None, self.renderer.exited or False, None
+        self.last_observation =  np.expand_dims(np.array(observations, dtype=np.uint8), axis=0)
+        return self.last_observation, None, self.renderer.exited or False, None
 
     def _get_random_circle_radius(self)->float:
         return max(5.0, abs(random.normalvariate(self.circle_radius, self.circle_radius/2)))
@@ -105,7 +107,7 @@ class BoxWorldEnv(gym.Env):
         self.world.add(self.agent)
 
     def render(self, mode='human'):
-        self.renderer.render(self.world, mode)
+        self.renderer.render(self.world, self.last_observation, mode=mode)
 
     def close(self):
         self.obss, self.foods = [], []
