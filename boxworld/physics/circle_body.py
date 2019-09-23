@@ -1,9 +1,10 @@
 from .body import Body
 import pymunk
+import numpy as np
 
 class CircleBody(Body):
-    def __init__(self, mass:float, position, radius:float, friction:float=0.0, elasticity:float=1.0,
-     inertia=None, inner_radius=0)->None:
+    def __init__(self, mass:float, position, angle:float, radius:float, rgba_color:tuple=None, 
+        friction:float=0.0, elasticity:float=1.0, category_mask:int=None, inertia=None, inner_radius=0)->None:
 
         super(CircleBody, self).__init__()
 
@@ -12,6 +13,10 @@ class CircleBody(Body):
         
         self.body = pymunk.Body(self.mass, self.inertia)
         self.body.position = position
+        self.body.angle = angle
         self.shape = pymunk.Circle(self.body, radius)
         self.shape.friction = friction
         self.shape.elasticity = elasticity
+        if category_mask:
+            self.shape.filter = pymunk.ShapeFilter(categories=category_mask)
+        self.shape.color = rgba_color or tuple(np.random.randint(256, size=3)) + (255,)

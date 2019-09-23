@@ -50,6 +50,6 @@ class Renderer:
                 print('Viewport size changed to', video_size)                
 
     def _draw_world(self, world:World)->None:
-        self.screen.fill(pygame.color.THECOLORS["white"])
+        self.screen.fill(world.color)
         options = pymunk.pygame_util.DrawOptions(self.screen)
         world.space.debug_draw(options)

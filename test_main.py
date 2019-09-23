@@ -7,5 +7,5 @@ env_done = False
 while not env_done:
     obs, reward, env_done, info = env.step(action=None)
     rendered=env.render(mode='human')
-
+    print(obs)
 env.close()

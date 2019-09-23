@@ -1,3 +1,4 @@
+from typing import Iterator
 import pymunk
 import time
 from .body import Body
@@ -9,6 +10,7 @@ class World:
         self.space = pymunk.Space()
         self.space.gravity = gravityx, gravityy
         self.last_step_time = time.time()
+        self.color = (253, 223, 211, 0)
 
     def step(self, dt:float=None)->None:
         dt = dt or (time.time() - self.last_step_time)
@@ -28,6 +30,18 @@ class World:
         for s in walls:
             s.friction = friction
             s.elasticity = elasticity
+            s.color = (247, 207, 49, 255)
             s.group = 1
 
         self.space.add(walls)
+
+    @staticmethod
+    def get_filter(value:int)->pymunk.ShapeFilter:
+        return pymunk.ShapeFilter(mask=pymunk.ShapeFilter.ALL_MASKS ^ value)
+
+    def get_observations(self, body:Body, local_pts:Iterator[tuple], filter:pymunk.ShapeFilter)->Iterator[tuple]:
+        start_pt = body.body.position
+        for local_pt in local_pts:
+            end_pt = body.body.local_to_world(local_pt)
+            result = self.space.segment_query_first(start_pt, end_pt, 0, filter)
+            yield result.shape.color if result and result.shape else (0,0,0,0)        
