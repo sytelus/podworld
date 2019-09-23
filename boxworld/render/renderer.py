@@ -1,4 +1,5 @@
 import sys
+import platform
 import numpy as np
 import pygame
 import pymunk.pygame_util
@@ -15,6 +16,10 @@ class Renderer:
 
     def _init_lazy_render(self, world:World):
         if not self.screen:
+            if platform.system() == 'Windows':
+                # don't scale window size for DPI scaling
+                import ctypes
+                ctypes.windll.user32.SetProcessDPIAware()            
             pygame.init()
             self.viewport_size = self.viewport_size or (world.xmax, world.ymax)
             self.viewport_size = self.viewport_size[0], self.viewport_size[1] + self.info_height
@@ -52,7 +57,7 @@ class Renderer:
             elif event.type == pygame.VIDEORESIZE:
                 self.viewport_size = event.size
                 self.screen = pygame.display.set_mode(self.viewport_size)
-                print('Viewport size changed to', video_size)                
+                print('Viewport size changed to', self.viewport_size)                
 
     def _draw_info(self, last_observation:np.ndarray):
         width = self.screen.get_width()
