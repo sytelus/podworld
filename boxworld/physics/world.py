@@ -1,5 +1,6 @@
 import pymunk
 import time
+from .body import Body
 
 class World:
     def __init__(self, xmax:int, ymax:int, gravityx:float=0.0, gravityy:float=0.0)->None:
@@ -14,8 +15,8 @@ class World:
         self.last_step_time = time.time()
         self.space.step(dt)
 
-    def add(self, phys_obj)->None:
-        self.space.add(phys_obj)
+    def add(self, body:Body)->None:
+        self.space.add(body.shape, body.body)
 
     def create_boundry(self, width=10, friction:float=0.0, elasticity:float=1.0)->None:
         xmax, ymax = self.xmax, self.ymax
@@ -29,4 +30,4 @@ class World:
             s.elasticity = elasticity
             s.group = 1
 
-        self.add(walls)        
+        self.space.add(walls)
