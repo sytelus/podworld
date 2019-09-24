@@ -21,7 +21,7 @@ class World:
     def add(self, body:Body)->None:
         self.space.add(body.shape, body.body)
 
-    def create_boundry(self, width=10, friction:float=0.0, elasticity:float=1.0, collision_type:int=None)->None:
+    def create_boundry(self, width=100, friction:float=0.0, elasticity:float=1.0, collision_type:int=None)->None:
         xmax, ymax = self.xmax, self.ymax
         walls= [pymunk.Segment(self.space.static_body, (-width, -width), (-width, ymax+width), width)
                     ,pymunk.Segment(self.space.static_body, (-width, ymax+width), (xmax+width, ymax+width), width)
@@ -61,3 +61,10 @@ class World:
     def end(self):
         self.collision_handlers.clear()
         self.space = None
+
+    def get_total_momentum(self):
+        total_momentum = 0.0
+        for body in self.space.bodies:
+            if body.body_type == pymunk.Body.DYNAMIC:
+                total_momentum += body.mass * body.velocity.get_length()
+        return total_momentum

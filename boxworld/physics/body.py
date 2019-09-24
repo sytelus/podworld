@@ -10,6 +10,8 @@ class Body(metaclass=ABCMeta):
 
     def apply_impulse(self, impulse:tuple, local_pos:tuple)->None:
         self.body.apply_impulse_at_local_point(impulse, local_pos)
+    def apply_force(self, impulse:tuple, local_pos:tuple)->None:
+        self.body.apply_force_at_local_point(impulse, local_pos)
 
     def _apply_gaussian_impulse(self, extent:tuple, magnitude_mean:float, magnitude_stddev:float)->None:
         x, y = extent
