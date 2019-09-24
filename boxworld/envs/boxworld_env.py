@@ -30,7 +30,7 @@ class BoxWorldEnv(gym.Env):
         box_size=(40.0, 40.0), circle_radius=30.0, box_mass=1.0, circle_mass=1.0,
         bar_count=4, bar_size=(900.0,40.0), bar_mass=10.0,
         agent_radius=40.0, agent_mass=100.0, agent_obs_length=400.0, agent_ray_count=64,
-        action_strength=50000.0, friction=0.3, elasticity=0.9)->None:
+        action_strength=50000.0, friction=0.0, elasticity=1.0)->None:
 
         self.seed(seed)
 
