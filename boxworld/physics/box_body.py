@@ -5,7 +5,7 @@ import numpy as np
 class BoxBody(Body):
     def __init__(self, mass:float, position, angle:float, size:tuple, rgba_color:tuple=None, 
         corner_radius:float=0.0, friction:float=0.0, elasticity:float=1.0, category_mask=None,
-        inertia=None, inner_radius=0)->None:
+        collision_type:int=None, inertia=None, inner_radius=0)->None:
 
         super(BoxBody, self).__init__()
         
@@ -20,4 +20,6 @@ class BoxBody(Body):
         self.shape.elasticity = elasticity
         if category_mask:
             self.shape.filter = pymunk.ShapeFilter(categories=category_mask)
+        if collision_type is not None:
+            self.shape.collision_type = collision_type            
         self.shape.color = rgba_color or tuple(np.random.randint(256, size=3)) + (255,)

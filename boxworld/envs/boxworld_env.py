@@ -16,6 +16,13 @@ class BoxWorldEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array'],
                 'video.frames_per_second': 60} #TODO: support 'ansi'
 
+    OBJ_TYPE_ROCK = 1
+    OBJ_TYPE_FOOD = 2
+    OBJ_TYPE_BAR = 3
+    OBJ_TYPE_WALL = 4
+    OBJ_TYPE_AGENT = 0
+
+
     def __init__(self, food_count=10, obs_count=30, xmax=2560, ymax=1440, seed=42,
         box_size=(40, 40), circle_radius=30, box_mass=1, circle_mass=1,
         bar_count=4, bar_size=(900,40), bar_mass=10,
@@ -23,6 +30,10 @@ class BoxWorldEnv(gym.Env):
 
         np.random.seed(seed)
         random.seed(seed)
+
+        self.obss, self.foods, self.bars, self.agent, self.world = \
+            None, None, None, None, None
+        self.step_reward, self.episod_reward = None, None
 
         self.food_count, self.obs_count, self.xmax, self.ymax = food_count, obs_count, xmax, ymax
         self.box_size, self.circle_radius, self.box_mass, self.circle_mass = box_size, circle_radius, box_mass, circle_mass
@@ -39,42 +50,47 @@ class BoxWorldEnv(gym.Env):
 
         self.renderer = Renderer()
 
-    def _get_obs_local_pts(self)->Iterator[Tuple[float, float]]:
-        start = 0
-        step = 2 * math.pi / self.observation_space.shape[1]
-        for i in range(self.observation_space.shape[1]):
-            angle = start + step * i
-            yield math.cos(angle) * self.agent_obs_length, math.sin(angle) * self.agent_obs_length
-
-    def _get_random_position(self, clearance)->tuple:
-        return random.randint(clearance, self.xmax-clearance), random.randint(clearance, self.ymax-clearance)
-
     def step(self, action):
         self.world.step(1.0/self.renderer.human_mode_fps)
+
         observations = list(self.world.get_observations(self.agent, self._obs_local_pts, self._agent_filter))
         self.last_observation =  np.expand_dims(np.array(observations, dtype=np.uint8), axis=0)
-        return self.last_observation, None, self.renderer.exited or False, None
 
-    def _get_random_circle_radius(self)->float:
-        return max(5.0, abs(random.normalvariate(self.circle_radius, self.circle_radius/2)))
-    def _get_random_box_size(self)->float:
-        return (max(5.0, abs(random.normalvariate(self.box_size[0], self.box_size[0]/2))),
-            max(5.0, abs(random.normalvariate(self.box_size[1], self.box_size[1]/2))))
-    def _get_random_bar_size(self)->float:
-        return (max(10.0, abs(random.normalvariate(self.bar_size[0], self.bar_size[0]/4))),
-            max(10.0, abs(random.normalvariate(self.bar_size[1], self.bar_size[1]/8))))
+        reward = self.step_reward
+        self.step_reward = 0
+
+        return self.last_observation, reward, self.renderer.exited or False, None
+
+    def _on_agent_rock_collision(self, arbiter, space, data)->bool:
+        self._add_step_reward(-10)
+        return True
+    def _on_agent_food_collision(self, arbiter, space, data)->bool:
+        self._add_step_reward(10)
+        return True        
+
+    def _add_step_reward(self, reward:float)->None:
+        self.episod_reward += reward
+        self.step_reward += reward
 
     def reset(self):
         self.obss, self.foods, self.bars = [], [], []
         self.agent = None
+        self.step_reward, self.episod_reward = 0.0, 0.0
+        if self.world:
+            self.world.end()
         self.world = World(xmax=self.xmax, ymax=self.ymax)
-        self.world.create_boundry()
+        self.world.create_boundry(collision_type=BoxWorldEnv.OBJ_TYPE_WALL)
+        self.world.set_collision_callback(BoxWorldEnv.OBJ_TYPE_AGENT, BoxWorldEnv.OBJ_TYPE_FOOD, 
+            self._on_agent_food_collision)
+        self.world.set_collision_callback(BoxWorldEnv.OBJ_TYPE_AGENT, BoxWorldEnv.OBJ_TYPE_ROCK, 
+            self._on_agent_rock_collision)
+
 
         for _ in range(self.obs_count):
             radius = self._get_random_circle_radius()
             obj = CircleBody(mass=self.circle_mass * radius * radius, 
                 position=self._get_random_position(clearance=self.circle_radius),
-                angle=random.random() * 2 * math.pi,
+                angle=random.random() * 2 * math.pi, collision_type=BoxWorldEnv.OBJ_TYPE_ROCK,
                 radius=radius, rgba_color=(162, 110, 180,255))
             self.world.add(obj)
             self.foods.append(obj)            
@@ -83,7 +99,7 @@ class BoxWorldEnv(gym.Env):
             box_size = self._get_random_box_size()
             obj = BoxBody(mass=self.box_mass * box_size[0] * box_size[1], 
                 position=self._get_random_position(clearance=max(self.box_size)),
-                angle=random.random() * 2 * math.pi,
+                angle=random.random() * 2 * math.pi, collision_type=BoxWorldEnv.OBJ_TYPE_FOOD,
                 size=box_size, corner_radius=1.0, rgba_color= (74, 198, 73, 255))
             self.world.add(obj)
             self.obss.append(obj)
@@ -92,7 +108,7 @@ class BoxWorldEnv(gym.Env):
             bar_size = self._get_random_bar_size()
             obj = BoxBody(mass=self.bar_mass * bar_size[0] * bar_size[1], 
                 position=(self.xmax/(self.bar_count+1)*(i+1), random.randint(0,self.ymax)),
-                angle=random.random() * 2 * math.pi,
+                angle=random.random() * 2 * math.pi, collision_type=BoxWorldEnv.OBJ_TYPE_BAR,
                 size=bar_size, corner_radius=1.0, rgba_color= (232, 184, 164, 255))
             self.world.add(obj)
             self.bars.append(obj)
@@ -102,13 +118,36 @@ class BoxWorldEnv(gym.Env):
         self._agent_filter = World.get_filter(self._agent_mask)        
         self.agent = CircleBody(mass=self.agent_mass, 
             position=self._get_random_position(clearance=self.agent_radius),
-            angle=random.random() * 2 * math.pi,
+            angle=random.random() * 2 * math.pi, collision_type=BoxWorldEnv.OBJ_TYPE_AGENT,
             radius=self.agent_radius, rgba_color=(224, 23, 33,255), category_mask=self._agent_mask)
         self.world.add(self.agent)
 
     def render(self, mode='human'):
-        self.renderer.render(self.world, self.last_observation, mode=mode)
+        self.renderer.render(self.world, self.last_observation, self.episod_reward, mode=mode)
 
     def close(self):
         self.obss, self.foods = [], []
+        if self.world:
+            self.world.end()
         self.world = None
+
+    def _get_random_circle_radius(self)->float:
+        return max(5.0, abs(random.normalvariate(self.circle_radius, self.circle_radius/2)))
+
+    def _get_random_box_size(self)->float:
+        return (max(5.0, abs(random.normalvariate(self.box_size[0], self.box_size[0]/2))),
+            max(5.0, abs(random.normalvariate(self.box_size[1], self.box_size[1]/2))))
+
+    def _get_random_bar_size(self)->float:
+        return (max(10.0, abs(random.normalvariate(self.bar_size[0], self.bar_size[0]/4))),
+            max(10.0, abs(random.normalvariate(self.bar_size[1], self.bar_size[1]/8))))
+
+    def _get_obs_local_pts(self)->Iterator[Tuple[float, float]]:
+        start = 0
+        step = 2 * math.pi / self.observation_space.shape[1]
+        for i in range(self.observation_space.shape[1]):
+            angle = start + step * i
+            yield math.cos(angle) * self.agent_obs_length, math.sin(angle) * self.agent_obs_length
+
+    def _get_random_position(self, clearance)->tuple:
+        return random.randint(clearance, self.xmax-clearance), random.randint(clearance, self.ymax-clearance)

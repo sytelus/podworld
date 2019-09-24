@@ -25,15 +25,17 @@ class Renderer:
             self.viewport_size = self.viewport_size[0], self.viewport_size[1] + self.info_height
             self.screen = pygame.display.set_mode(self.viewport_size)
             self.clock = pygame.time.Clock()
-            self.font = pygame.font.SysFont("Arial", 16)
+            self.font = pygame.font.Font(pygame.font.get_default_font(), 36)
 
-    def render(self, world:World, last_observation:np.ndarray, mode='human')->np.ndarray:
+    def render(self, world:World, last_observation:np.ndarray, episod_reward:float, 
+        mode='human')->np.ndarray:
+
         self._init_lazy_render(world)
         self._handle_player_events()
         if self.exited:
             return None        
         self._draw_world(world)
-        self._draw_info(last_observation)
+        self._draw_info(last_observation, episod_reward)
 
         ret:np.ndarray = None
         if mode == 'human':
@@ -59,18 +61,22 @@ class Renderer:
                 self.screen = pygame.display.set_mode(self.viewport_size)
                 print('Viewport size changed to', self.viewport_size)                
 
-    def _draw_info(self, last_observation:np.ndarray):
+    def _draw_info(self, last_observation:np.ndarray, episod_reward:float):
         width = self.screen.get_width()
-        self.screen.fill(pygame.color.THECOLORS['black'], 
+        obs_height = self.info_height / 2.0       
+        self.screen.fill(pygame.color.THECOLORS['white'], 
             pygame.rect.Rect(0, 0, width, self.info_height))
+
+        info_text = 'Reward: {}'.format(episod_reward)
+        text_surface = self.font.render(info_text, True, (0, 0, 0))
+        self.screen.blit(text_surface, (0,0))
 
         if last_observation is not None:
             obs_width = width / last_observation.shape[1]
-            obs_height = self.info_height
             for i in range(last_observation.shape[1]):
                 color = tuple(last_observation[0, i])
                 self.screen.fill(color, 
-                            pygame.rect.Rect(i*obs_width, 0, obs_width, obs_height))
+                            pygame.rect.Rect(i*obs_width, self.info_height-obs_height, obs_width, obs_height))
 
     def _draw_world(self, world:World)->None:
         self.screen.fill(world.color)
