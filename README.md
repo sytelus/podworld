@@ -1,8 +1,8 @@
 # Welcome to PodWorld
 
-PodWorld is [OpenAI Gym](https://gym.openai.com/) environment for [reinforcement learning](http://incompleteideas.net/book/the-book-2nd.html) experimentations. PodWorld is specifically designed to be partially observable and dynamic (hence abbreviation P.O.D.). We emphasize these two attributes to force agents learn spatial as well as temporal representations that must go beyond simple memorization. In addition, all entities in PodWorld must obey laws of physics allowing for long tail of emergent observations that may not appear in games designed with arbitrary hand crafted rules for human entertainment. 
+PodWorld is [OpenAI Gym](https://gym.openai.com/) environment for [reinforcement learning](http://incompleteideas.net/book/the-book-2nd.html) experimentations. PodWorld is specifically designed to be partially observable and dynamic (hence abbreviation P.O.D.). We emphasize these two attributes to force agents learn spatial as well as temporal representation of constantly changing environment. In addition, all entities in PodWorld obeys laws of physics allowing for long tail of emergent behaviours that may not be available in games designed with hand crafted rules for human entertainment. 
 
-PodWorld is fast (>500 FPS on usual laptops) without needing GPU and run cross platform in headless mode or with render. PodWorld is highly customizable and meant to be hackable with its fairly simple and minimal code base.
+PodWorld is fast (>500 FPS on usual laptops) without needing GPU, cross-platform and can run in headless mode as well as with render. PodWorld is highly customizable and meant to be hackable so new task definitions can easily be accomodated and difficulty level can easily be changed across several dimensions.
 
 ## How to Install
 
