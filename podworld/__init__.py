@@ -4,6 +4,6 @@
 from gym.envs.registration import register
 
 register(
-    id='boxworld-v0',
-    entry_point='boxworld.envs:BoxWorldEnv',
+    id='podworld-v0',
+    entry_point='podworld.envs:PodWorldEnv',
 )

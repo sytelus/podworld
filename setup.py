@@ -7,14 +7,14 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="boxworld",
-    version="0.0.1",
+    name="podworld",
+    version="0.1.0",
     author="Shital Shah",
     author_email="shitals@microsoft.com",
-    description="2D dynamic world for RL experiments",
+    description="2D partially observable dynamic world for RL experiments",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/sytelus/boxworld",
+    url="https://github.com/sytelus/podworld",
     packages=setuptools.find_packages(),
 	license='MIT',
     classifiers=(
@@ -24,6 +24,6 @@ setuptools.setup(
     ),
     include_package_data=True,
     install_requires=[
-          'pymunk', 'pygame', 'numpy', 'matplotlib', 'Pillow', 'opencv-python', 'gym'
+          'pymunk', 'pygame', 'numpy', 'gym'
     ]
 )

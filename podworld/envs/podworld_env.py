@@ -12,7 +12,7 @@ import math
 import numpy as np
 from typing import Iterator, Tuple
 
-class BoxWorldEnv(gym.Env):
+class PodWorldEnv(gym.Env):
     metadata = {'render.modes': ['human', 'rgb_array'],
                 'video.frames_per_second': 60} #TODO: support 'ansi'
 
@@ -24,13 +24,18 @@ class BoxWorldEnv(gym.Env):
 
     EATEN_FOOD_COLOR = (194, 199, 190, 255)
     AVAIL_FOOD_COLOR = (74, 198, 73, 255)
+    OBS_COLOR = (162, 110, 180,255)
 
 
     def __init__(self, food_count=10, obs_count=30, xmax=2560, ymax=1440, seed=42,
         box_size=(40.0, 40.0), circle_radius=30.0, box_mass=1.0, circle_mass=1.0,
         bar_count=4, bar_size=(900.0,40.0), bar_mass=10.0,
-        agent_radius=40.0, agent_mass=100.0, agent_obs_length=400.0, agent_ray_count=64,
-        action_strength=50000.0, friction=0.0, elasticity=1.0)->None:
+        agent_radius=40.0, agent_mass=100.0, agent_obs_length=400.0, 
+        agent_ray_count=64, agent_actuator_count=16,
+        obs_start_angle=0, obs_end_angle=2 * math.pi, 
+        act_start_angle=0, act_end_angle=2 * math.pi,
+        action_strength=50000.0, friction=0.1, elasticity=0.9,
+        food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0)->None:
 
         self.seed(seed)
 
@@ -45,13 +50,20 @@ class BoxWorldEnv(gym.Env):
         self.bar_count, self.bar_size, self.bar_mass = bar_count, bar_size, bar_mass
         self.agent_radius, self.agent_mass, self.agent_obs_length = agent_radius, agent_mass, agent_obs_length
         self.agent_ray_count, self.action_strength = agent_ray_count, action_strength
+        self.agent_actuator_count = agent_actuator_count
+        self.obs_start_angle, self.obs_end_angle = obs_start_angle, obs_end_angle
+        self.act_start_angle, self.act_end_angle = act_start_angle, act_end_angle
         self.friction, self.elasticity = friction, elasticity
+        self.food_impulse, self.obs_impulse, self.bar_impulse, self.init_impulse_factor = \
+            food_impulse, obs_impulse, bar_impulse, init_impulse_factor
 
-        self.action_space = spaces.Discrete(16+1) # 16 directions clockwise, action 0 is no op
+        self.action_space = spaces.Discrete(agent_actuator_count+1) # directions clockwise, action 0 is no op
         self.observation_space = spaces.Box(low=0, high=255, shape=(1, agent_ray_count, 3), dtype=np.uint8)
 
-        self._obs_local_pts = list(self._get_pts_on_circle(self.observation_space.shape[1], self.agent_obs_length))
-        self._action_pts = list(self._get_pts_on_circle(self.action_space.n-1, self.action_strength))
+        self._obs_local_pts = list(self._get_pts_on_circle(
+            self.observation_space.shape[1], self.agent_obs_length, obs_start_angle, obs_end_angle))
+        self._action_pts = list(self._get_pts_on_circle(
+            self.action_space.n-1, self.action_strength, act_start_angle, act_end_angle))
         self._agent_mask = 0b1
         self.last_observation = None
 
@@ -65,10 +77,10 @@ class BoxWorldEnv(gym.Env):
         if self.world:
             self.world.end()
         self.world = World(xmax=self.xmax, ymax=self.ymax)
-        self.world.create_boundry(collision_type=BoxWorldEnv.OBJ_TYPE_WALL)
-        self.world.set_collision_callback(BoxWorldEnv.OBJ_TYPE_AGENT, BoxWorldEnv.OBJ_TYPE_FOOD, 
+        self.world.create_boundry(collision_type=PodWorldEnv.OBJ_TYPE_WALL)
+        self.world.set_collision_callback(PodWorldEnv.OBJ_TYPE_AGENT, PodWorldEnv.OBJ_TYPE_FOOD, 
             self._on_agent_food_collision)
-        self.world.set_collision_callback(BoxWorldEnv.OBJ_TYPE_AGENT, BoxWorldEnv.OBJ_TYPE_ROCK, 
+        self.world.set_collision_callback(PodWorldEnv.OBJ_TYPE_AGENT, PodWorldEnv.OBJ_TYPE_ROCK, 
             self._on_agent_rock_collision)
         self.initial_total_momentum, self.last_total_momentum = None, None
 
@@ -76,39 +88,39 @@ class BoxWorldEnv(gym.Env):
             radius = self._get_random_circle_radius()
             obj = CircleBody(mass=self.circle_mass * radius * radius, 
                 position=self._get_random_position(clearance=10),
-                angle=random.random() * 2 * math.pi, collision_type=BoxWorldEnv.OBJ_TYPE_ROCK,
-                radius=radius, rgba_color=(162, 110, 180,255), 
+                angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_ROCK,
+                radius=radius, rgba_color=PodWorldEnv.OBS_COLOR, 
                 friction=self.friction, elasticity=self.elasticity)
             self.world.add(obj)
             self.obss.append(obj)            
-            obj._apply_gaussian_impulse((radius, radius), obj.mass, obj.mass*100)
+            obj._apply_gaussian_impulse((radius, radius), obj.mass, obj.mass*self.obs_impulse*self.init_impulse_factor)
         for _ in range(self.food_count):
             box_size = self._get_random_box_size()
             mass = self.box_mass * box_size[0] * box_size[1]
             obj = BoxBody(mass=mass, 
                 position=self._get_random_position(clearance=10),
-                angle=random.random() * 2 * math.pi, collision_type=BoxWorldEnv.OBJ_TYPE_FOOD,
-                size=box_size, corner_radius=1.0, rgba_color=BoxWorldEnv.AVAIL_FOOD_COLOR, 
+                angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_FOOD,
+                size=box_size, corner_radius=1.0, rgba_color=PodWorldEnv.AVAIL_FOOD_COLOR, 
                 friction=self.friction, elasticity=self.elasticity)
             self.world.add(obj)
             self.foods.append(obj)
-            obj._apply_gaussian_impulse(box_size, obj.mass, obj.mass*100)
+            obj._apply_gaussian_impulse(box_size, obj.mass, obj.mass*self.food_impulse*self.init_impulse_factor)
         for i in range(self.bar_count):
             bar_size = self._get_random_bar_size()
             obj = BoxBody(mass=self.bar_mass * bar_size[0] * bar_size[1], 
                 position=(self.xmax/(self.bar_count+1)*(i+1), random.randint(0,self.ymax)),
-                angle=random.random() * 2 * math.pi, collision_type=BoxWorldEnv.OBJ_TYPE_BAR,
+                angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_BAR,
                 size=bar_size, corner_radius=1.0, rgba_color= (232, 184, 164, 255), 
                 friction=self.friction, elasticity=self.elasticity)
             self.world.add(obj)
             self.bars.append(obj)
-            obj._apply_gaussian_impulse(bar_size, obj.mass, obj.mass*20)
+            obj._apply_gaussian_impulse(bar_size, obj.mass, obj.mass*self.bar_impulse*self.init_impulse_factor)
 
         # add agent
         self._agent_filter = World.get_filter(self._agent_mask)        
         self.agent = CircleBody(mass=self.agent_mass, 
             position=self._get_random_position(clearance=self.agent_radius),
-            angle=random.random() * 2 * math.pi, collision_type=BoxWorldEnv.OBJ_TYPE_AGENT,
+            angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_AGENT,
             radius=self.agent_radius, rgba_color=(224, 23, 33,255), category_mask=self._agent_mask, 
             friction=self.friction, elasticity=self.elasticity)
         self.world.add(self.agent)
@@ -144,14 +156,14 @@ class BoxWorldEnv(gym.Env):
     def _on_agent_rock_collision(self, arbiter, space, data)->bool:
         if arbiter.shapes:
             for shape in arbiter.shapes:
-                if shape.collision_type == BoxWorldEnv.OBJ_TYPE_ROCK:
+                if shape.collision_type == PodWorldEnv.OBJ_TYPE_ROCK:
                     self._add_step_reward(-shape.body.mass * shape.body.velocity.get_length() / 100.0)
 
         return True
     def _on_agent_food_collision(self, arbiter, space, data)->bool:
         if arbiter.shapes:
             for shape in arbiter.shapes:
-                if shape.collision_type == BoxWorldEnv.OBJ_TYPE_FOOD and shape not in self.eaten_foods:
+                if shape.collision_type == PodWorldEnv.OBJ_TYPE_FOOD and shape not in self.eaten_foods:
                     self._add_step_reward(shape.body.mass)
                     self._set_eaten_status(shape, True)              
 
@@ -159,10 +171,10 @@ class BoxWorldEnv(gym.Env):
 
     def _set_eaten_status(self, shape, is_eaten)->None:
         if is_eaten:
-            shape.color = BoxWorldEnv.EATEN_FOOD_COLOR
+            shape.color = PodWorldEnv.EATEN_FOOD_COLOR
             self.eaten_foods[shape] = self.step_count # record time step when food was eater
         else:
-            shape.color = BoxWorldEnv.AVAIL_FOOD_COLOR
+            shape.color = PodWorldEnv.AVAIL_FOOD_COLOR
             self.eaten_foods.pop(shape, None)
 
     def _regrow_food(self):
@@ -198,12 +210,11 @@ class BoxWorldEnv(gym.Env):
         return (max(10.0, abs(random.normalvariate(self.bar_size[0], self.bar_size[0]/4))),
             max(10.0, abs(random.normalvariate(self.bar_size[1], self.bar_size[1]/8))))
 
-    def _get_pts_on_circle(self, count:int, length:float)->Iterator[Tuple[float, float]]:
-        start = 0
-        step = 2 * math.pi / count
+    def _get_pts_on_circle(self, count:int, radius:float, start_angle:float, end_angle:float)->Iterator[Tuple[float, float]]:
+        step = (end_angle-start_angle) / count
         for i in range(count):
-            angle = start + step * i
-            yield math.cos(angle) * length, math.sin(angle) * length
+            angle = start_angle + step * i
+            yield math.cos(angle) * radius, math.sin(angle) * radius
 
     def _get_random_position(self, clearance)->tuple:
         return random.randint(clearance, self.xmax-clearance), random.randint(clearance, self.ymax-clearance)
