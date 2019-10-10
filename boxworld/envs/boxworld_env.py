@@ -102,6 +102,7 @@ class BoxWorldEnv(gym.Env):
                 friction=self.friction, elasticity=self.elasticity)
             self.world.add(obj)
             self.bars.append(obj)
+            obj._apply_gaussian_impulse(bar_size, obj.mass, obj.mass*20)
 
         # add agent
         self._agent_filter = World.get_filter(self._agent_mask)        
