@@ -40,7 +40,7 @@ while not done:
 [View source](tests/test_random_agent.py).
 
 ## Observation, Action and Reward
-<img src="screenshot.png">
+<img src="podworld.gif">
 
 All objects in PodWord obey laws of physics, have mass and can move due to application of force.
 
