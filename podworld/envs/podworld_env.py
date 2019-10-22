@@ -34,7 +34,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         agent_ray_count=64, agent_actuator_count=16,
         obs_start_angle=0, obs_end_angle=2 * math.pi, obs_mode=World.OBS_MODE_RGB,
         act_start_angle=0, act_end_angle=2 * math.pi,
-        action_strength=50000.0, friction=0.1, elasticity=0.9,
+        action_strength=5000.0, friction=0.2, elasticity=0.8,
         food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0,
         max_steps=2**31-1, reward_factor=1.0)->None:
 
