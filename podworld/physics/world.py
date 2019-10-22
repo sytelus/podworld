@@ -1,9 +1,14 @@
 from typing import Iterator, Callable, Any
 import pymunk
 import time
+import numpy as np
 from .body import Body
 
 class World:
+    OBS_MODE_RGB='RGB'
+    OBS_MODE_RGBA='RGBA'
+    OBS_MODE_RGBAD='RGBD'
+
     def __init__(self, xmax:int, ymax:int, gravityx:float=0.0, gravityy:float=0.0)->None:
         # pymonk has origin on left bottom
         self.xmax, self.ymax = xmax, ymax
@@ -43,15 +48,27 @@ class World:
 
     # for each pixel, return RGBA tuple
     def get_observations(self, body:Body, local_pts:Iterator[tuple], 
-        filter:pymunk.ShapeFilter, rgb_only=True)->Iterator[tuple]:
+        filter:pymunk.ShapeFilter, obs_mode=OBS_MODE_RGB)->Iterator[tuple]:
 
         start_pt = body.body.position
         for local_pt in local_pts:
             end_pt = body.body.local_to_world(local_pt)
             result = self.space.segment_query_first(start_pt, end_pt, 0, filter)
-            color = result.shape.color if result and result.shape else (0,0,0,0)
-            if rgb_only:
+            color, pos = (0,0,0,0), None
+            if result and result.shape:
+                color = result.shape.color
+                pos = result.shape.body.position
+
+            if obs_mode == World.OBS_MODE_RGB:
                 color = color[:3]
+            elif obs_mode == World.OBS_MODE_RGBA:
+                pass
+            elif obs_mode == World.OBS_MODE_RGBAD:
+                dist = 1.0
+                if pos is not None:
+                    dist = np.linalg.norm([body.body.position[0]-pos[0], 
+                        body.body.position[1]-pos[1]])
+                color += (dist,)
             yield color
 
     def set_collision_callback(self, collision_type_a:int, collision_type_b:int, 

@@ -27,13 +27,12 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
     AVAIL_FOOD_COLOR = (74, 198, 73, 255)
     OBS_COLOR = (162, 110, 180,255)
 
-
     def __init__(self, food_count=10, obs_count=30, xmax=2560, ymax=1440, seed=42,
         box_size=(40.0, 40.0), circle_radius=30.0, box_mass=1.0, circle_mass=1.0,
         bar_count=4, bar_size=(900.0,40.0), bar_mass=10.0, 
         agent_radius=40.0, agent_mass=100.0, agent_obs_length=400.0, 
         agent_ray_count=64, agent_actuator_count=16,
-        obs_start_angle=0, obs_end_angle=2 * math.pi, 
+        obs_start_angle=0, obs_end_angle=2 * math.pi, obs_mode=World.OBS_MODE_RGB,
         act_start_angle=0, act_end_angle=2 * math.pi,
         action_strength=50000.0, friction=0.1, elasticity=0.9,
         food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0,
@@ -55,6 +54,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.agent_ray_count, self.action_strength = agent_ray_count, action_strength
         self.agent_actuator_count = agent_actuator_count
         self.obs_start_angle, self.obs_end_angle = obs_start_angle, obs_end_angle
+        self.obs_mode = obs_mode
         self.act_start_angle, self.act_end_angle = act_start_angle, act_end_angle
         self.friction, self.elasticity = friction, elasticity
         self.food_impulse, self.obs_impulse, self.bar_impulse, self.init_impulse_factor = \
@@ -163,7 +163,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
 
     def _update_observation(self)->None:
         pixels = list(self.world.get_observations(
-            self.agent, self._obs_local_pts, self._agent_filter)) # remove alpha from RGBA
+            self.agent, self._obs_local_pts, self._agent_filter, self.obs_mode))
         self.last_observation = np.expand_dims(np.array(pixels, dtype=np.uint8), axis=0)
 
     def _on_agent_rock_collision(self, arbiter, space, data)->bool:
