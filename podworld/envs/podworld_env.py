@@ -1,5 +1,5 @@
 import gym
-from gym import spaces
+from gym import spaces, utils
 
 from ..render.renderer import Renderer 
 from ..physics.world import Body
@@ -9,10 +9,11 @@ from ..physics.circle_body import CircleBody
 
 import random
 import math
+import sys
 import numpy as np
 from typing import Iterator, Tuple
 
-class PodWorldEnv(gym.Env):
+class PodWorldEnv(gym.Env, utils.EzPickle):
     metadata = {'render.modes': ['human', 'rgb_array'],
                 'video.frames_per_second': 60} #TODO: support 'ansi'
 
@@ -29,13 +30,14 @@ class PodWorldEnv(gym.Env):
 
     def __init__(self, food_count=10, obs_count=30, xmax=2560, ymax=1440, seed=42,
         box_size=(40.0, 40.0), circle_radius=30.0, box_mass=1.0, circle_mass=1.0,
-        bar_count=4, bar_size=(900.0,40.0), bar_mass=10.0,
+        bar_count=4, bar_size=(900.0,40.0), bar_mass=10.0, 
         agent_radius=40.0, agent_mass=100.0, agent_obs_length=400.0, 
         agent_ray_count=64, agent_actuator_count=16,
         obs_start_angle=0, obs_end_angle=2 * math.pi, 
         act_start_angle=0, act_end_angle=2 * math.pi,
         action_strength=50000.0, friction=0.1, elasticity=0.9,
-        food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0)->None:
+        food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0,
+        max_steps=2**31-1, reward_factor=1.0)->None:
 
         self.seed(seed)
 
@@ -44,6 +46,7 @@ class PodWorldEnv(gym.Env):
         self.eaten_foods = None
         self.step_reward, self.episod_reward, self.step_count = None, None, None
         self.initial_total_momentum, self.last_total_momentum = None, None
+
         
         self.food_count, self.obs_count, self.xmax, self.ymax = food_count, obs_count, xmax, ymax
         self.box_size, self.circle_radius, self.box_mass, self.circle_mass = box_size, circle_radius, box_mass, circle_mass
@@ -56,6 +59,7 @@ class PodWorldEnv(gym.Env):
         self.friction, self.elasticity = friction, elasticity
         self.food_impulse, self.obs_impulse, self.bar_impulse, self.init_impulse_factor = \
             food_impulse, obs_impulse, bar_impulse, init_impulse_factor
+        self.max_steps, self.reward_factor = max_steps, reward_factor
 
         self.action_space = spaces.Discrete(agent_actuator_count+1) # directions clockwise, action 0 is no op
         self.observation_space = spaces.Box(low=0, high=255, shape=(1, agent_ray_count, 3), dtype=np.uint8)
@@ -125,6 +129,9 @@ class PodWorldEnv(gym.Env):
             friction=self.friction, elasticity=self.elasticity)
         self.world.add(self.agent)
 
+        self._update_observation()
+        return self.last_observation
+
     # overriden method
     def seed(self, seed=None):
         np.random.seed(seed)
@@ -141,17 +148,23 @@ class PodWorldEnv(gym.Env):
         if self.step_count % 100 == 0:
             self._update_global_momentum()
 
-        observations = list(self.world.get_observations(self.agent, self._obs_local_pts, self._agent_filter))
-        self.last_observation =  np.expand_dims(np.array(observations, dtype=np.uint8), axis=0)
+        self._update_observation()
 
         reward = self.step_reward
-        self.step_reward = 0
+        self.step_reward = 0.0
         self.step_count += 1
 
         if self.step_count % 100 == 0:
             self._regrow_food()
 
-        return self.last_observation, reward, self.renderer.exited or False, None
+        done = self.renderer.exited or self.step_count >= self.max_steps
+
+        return self.last_observation, reward/self.reward_factor, done, {}
+
+    def _update_observation(self)->None:
+        pixels = list(self.world.get_observations(
+            self.agent, self._obs_local_pts, self._agent_filter)) # remove alpha from RGBA
+        self.last_observation = np.expand_dims(np.array(pixels, dtype=np.uint8), axis=0)
 
     def _on_agent_rock_collision(self, arbiter, space, data)->bool:
         if arbiter.shapes:

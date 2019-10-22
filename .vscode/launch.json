@@ -8,7 +8,7 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/tests/test_human_mode.py",
+            "program": "${file}",
             "console": "integratedTerminal"
         }
     ]

@@ -24,6 +24,7 @@ setuptools.setup(
     ),
     include_package_data=True,
     install_requires=[
-          'pymunk', 'pygame', 'numpy', 'gym'
+          'pymunk', 'pygame', 'numpy', 'gym', 
+          'tensorwatch' # optional, only if test code/baselines are used
     ]
 )

@@ -41,12 +41,18 @@ class World:
     def get_filter(value:int)->pymunk.ShapeFilter:
         return pymunk.ShapeFilter(mask=pymunk.ShapeFilter.ALL_MASKS ^ value)
 
-    def get_observations(self, body:Body, local_pts:Iterator[tuple], filter:pymunk.ShapeFilter)->Iterator[tuple]:
+    # for each pixel, return RGBA tuple
+    def get_observations(self, body:Body, local_pts:Iterator[tuple], 
+        filter:pymunk.ShapeFilter, rgb_only=True)->Iterator[tuple]:
+
         start_pt = body.body.position
         for local_pt in local_pts:
             end_pt = body.body.local_to_world(local_pt)
             result = self.space.segment_query_first(start_pt, end_pt, 0, filter)
-            yield result.shape.color if result and result.shape else (0,0,0,0)
+            color = result.shape.color if result and result.shape else (0,0,0,0)
+            if rgb_only:
+                color = color[:3]
+            yield color
 
     def set_collision_callback(self, collision_type_a:int, collision_type_b:int, 
         callback:Callable[[pymunk.Arbiter, pymunk.Space, Any],bool], at_begin=True)->None:
