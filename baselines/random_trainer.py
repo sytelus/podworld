@@ -1,10 +1,17 @@
-from baselines.random_agent import RandomAgent
 from podworld.envs import PodWorldEnv
-from random_agent import RandomAgent
-from custom_trainer import train
+from rl_loop import run_episode
 
-env = PodWorldEnv(max_steps=1000)
+from base_agent import BaseAgent 
+
+class RandomAgent(BaseAgent):
+    def reset(self, env):
+        self.action_space = env.action_space
+
+    def act(self, observation, reward, done):
+        return self.action_space.sample()
+
+env = PodWorldEnv(max_steps=10000)
 agent = RandomAgent()
 
-train(env, agent)
+run_episode(env, agent)
 

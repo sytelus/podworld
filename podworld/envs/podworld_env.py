@@ -26,15 +26,16 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
     EATEN_FOOD_COLOR = (194, 199, 190, 255)
     AVAIL_FOOD_COLOR = (74, 198, 73, 255)
     OBS_COLOR = (162, 110, 180,255)
+    NOOBJ_COLOR = (0,0,0,0)
 
     def __init__(self, food_count=10, obs_count=30, xmax=2560, ymax=1440, seed=42,
         box_size=(40.0, 40.0), circle_radius=30.0, box_mass=1.0, circle_mass=1.0,
         bar_count=4, bar_size=(900.0,40.0), bar_mass=10.0, 
-        agent_radius=40.0, agent_mass=100.0, agent_obs_length=400.0, 
-        agent_ray_count=64, agent_actuator_count=16,
+        agent_radius=40.0, agent_mass=100.0, agent_obs_length=1200.0, 
+        agent_ray_count=16, agent_actuator_count=16,
         obs_start_angle=0, obs_end_angle=2 * math.pi, obs_mode=World.OBS_MODE_RGB,
         act_start_angle=0, act_end_angle=2 * math.pi,
-        action_strength=5000.0, friction=0.2, elasticity=0.8,
+        action_strength=2000.0, friction=0.2, elasticity=0.8,
         food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0,
         max_steps=2**31-1, reward_factor=1.0)->None:
 

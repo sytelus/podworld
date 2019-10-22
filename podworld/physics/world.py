@@ -7,7 +7,8 @@ from .body import Body
 class World:
     OBS_MODE_RGB='RGB'
     OBS_MODE_RGBA='RGBA'
-    OBS_MODE_RGBAD='RGBD'
+    OBS_MODE_RGBD='RGBD'
+    OBS_MODE_RGBAD='RGBAD'
 
     def __init__(self, xmax:int, ymax:int, gravityx:float=0.0, gravityy:float=0.0)->None:
         # pymonk has origin on left bottom
@@ -59,16 +60,15 @@ class World:
                 color = result.shape.color
                 pos = result.shape.body.position
 
-            if obs_mode == World.OBS_MODE_RGB:
+            if obs_mode == World.OBS_MODE_RGB or obs_mode == World.OBS_MODE_RGBD:
                 color = color[:3]
-            elif obs_mode == World.OBS_MODE_RGBA:
-                pass
-            elif obs_mode == World.OBS_MODE_RGBAD:
+            if obs_mode == World.OBS_MODE_RGBAD or obs_mode == World.OBS_MODE_RGBD:
                 dist = 1.0
                 if pos is not None:
                     dist = np.linalg.norm([body.body.position[0]-pos[0], 
                         body.body.position[1]-pos[1]])
                 color += (dist,)
+            #TODO: check invalid modes
             yield color
 
     def set_collision_callback(self, collision_type_a:int, collision_type_b:int, 

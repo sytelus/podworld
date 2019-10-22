@@ -3,7 +3,7 @@ import time
 from base_agent import BaseAgent
 import gym
 
-def train(env:gym.Env, agent:BaseAgent):
+def run_episode(env:gym.Env, agent:BaseAgent, render=False):
     start_time = time.time()
     print('Started', start_time)
 
@@ -18,7 +18,8 @@ def train(env:gym.Env, agent:BaseAgent):
     while not env_done:
         action = agent.act(obs, reward, env_done)
         obs, reward, env_done, info = env.step(action=action)
-        #rendered=env.render(mode='human')
+        if render:
+            rendered = env.render(mode='human')
         total_r += reward
         logger.write((i, total_r))
         i += 1
