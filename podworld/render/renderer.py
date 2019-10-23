@@ -9,7 +9,7 @@ from ..physics.world import World
 class RenderInfo:
     def __init__(self, world:World, last_observation:np.ndarray, 
         episod_reward:float, total_momentum:float, action:int, reward:float,
-        thrust_pt:Tuple[float, float])->None:
+        thrust_pt:Tuple[float, float], sensor_pts, sensor_probs, agent_obs_length)->None:
 
         self.world = world
         self.last_observation = last_observation
@@ -18,6 +18,9 @@ class RenderInfo:
         self.action = action
         self.reward = reward   
         self.thrust_pt = thrust_pt
+        self.sensor_pts = sensor_pts
+        self.sensor_probs = sensor_probs
+        self.agent_obs_length = agent_obs_length
 
 class Renderer:
     def __init__(self, viewport_size:tuple=None, human_mode_fps=60, info_height=None)->None:
@@ -74,15 +77,31 @@ class Renderer:
             pos_o = agent.body.position
             pos = (int(pos_o[0]), 
                     int(render_info.world.ymax-pos_o[1]+self.info_height))
+
+            pygame.draw.circle(self.screen, (100,100,100), pos, 
+                int(render_info.agent_obs_length), 1)
+
             if reward_color is not None:
                 pygame.draw.circle(self.screen, reward_color, pos, 10, 0)
             if render_info.thrust_pt is not None:
-                t_o = list(render_info.thrust_pt)
-                t_o = np.clip(t_o, -agent.shape.radius, agent.shape.radius)
-                t_w = pos_o[0]+t_o[0], pos_o[1]+t_o[1]
-                t = int(t_w[0]), int(render_info.world.ymax-t_w[1]+self.info_height)
+                t = self.local2world_pt(pos_o, render_info.thrust_pt, 
+                    agent.shape.radius, render_info.world)
                 pygame.draw.line(self.screen, (100,100,255), 
                     pos, t, 10)
+            # if render_info.sensor_probs is not None and render_info.sensor_pts is not None:
+            #     for i,sensor_pt in enumerate(render_info.sensor_pts):
+            #         p = self.local2world_pt(pos_o, sensor_pt, agent.shape.radius, render_info.world)
+            #         c = int(render_info.sensor_probs[i] * 255)
+            #         c = (255-c,255-c,0)
+            #         pygame.draw.circle(self.screen, c, p, 10, 0)
+
+    def local2world_pt(self, pos_o:Tuple[float, float], l_pt:Tuple[float, float], 
+        clip:float, world)->Tuple[float, float]:
+
+        t_o = list(l_pt)
+        t_o = np.clip(t_o, -clip, clip)
+        t_w = pos_o[0]+t_o[0], pos_o[1]+t_o[1]
+        return int(t_w[0]), int(world.ymax-t_w[1]+self.info_height)
 
     def _handle_player_events(self)->None:
         self.last_mapped_key = None

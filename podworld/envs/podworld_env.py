@@ -46,7 +46,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.eaten_foods = None
         self.step_reward, self.episod_reward, self.step_count = None, None, None
         self.initial_total_momentum, self.last_total_momentum = None, None
-        self.last_thrust, self.last_action = None, None
+        self.last_thrust, self.last_action, self.sensor_probs = None, None, None
 
         
         self.food_count, self.obs_count, self.xmax, self.ymax = food_count, obs_count, xmax, ymax
@@ -213,7 +213,8 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
 
     def render(self, mode='human'):
         render_info = RenderInfo(self.world, self.last_observation, self.episod_reward, 
-            self.last_total_momentum, self.last_action, self.step_reward, self.last_thrust)
+            self.last_total_momentum, self.last_action, self.step_reward, self.last_thrust,
+            self._obs_local_pts, self.sensor_probs, self.agent_obs_length)
         self.renderer.render(render_info, mode=mode)
 
     def close(self):

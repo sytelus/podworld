@@ -12,9 +12,10 @@ class RuleBasedAgent(BaseAgent):
             PodWorldEnv.AVAIL_FOOD_COLOR: 20.0,
             PodWorldEnv.NOOBJ_COLOR: 1.0
     }
-    gamma = 0.9
+    gamma = 0.8
 
     def reset(self, env):
+        self.env = env        
         self.pixel_count = env.observation_space.shape[1]
         self.action_count = env.action_space.n
         self.pix2act = (self.action_count-1.0)/self.pixel_count
@@ -31,12 +32,13 @@ class RuleBasedAgent(BaseAgent):
             for i in range(len(obj_ranks))])
         obj_ranks_conv_normed = obj_ranks_conv * 100.0 / (np.linalg.norm(obj_ranks_conv) + 1e-16)
         probabilities = softmax(-obj_ranks_conv_normed)
+        env.sensor_probs = probabilities
         goal_direction = np.random.choice(len(probabilities), p=probabilities)
         thrust_direction = (self.pixel_count/2 + goal_direction) % self.pixel_count
         action_val = int(self.pix2act * thrust_direction) + 1
         return action_val
 
-env = PodWorldEnv(max_steps=10000, obs_mode='RGBA')
+env = PodWorldEnv(max_steps=100000, obs_mode='RGBA')
 agent = RuleBasedAgent()
 
 run_episode(env, agent, render=True)
