@@ -1,4 +1,4 @@
-from typing import Iterator, Callable, Any
+from typing import Iterator, Callable, Any, Dict
 import pymunk
 import time
 import numpy as np
@@ -18,14 +18,17 @@ class World:
         self.last_step_time = time.time()
         self.color = (253, 223, 211, 0)
         self.collision_handlers = []
+        self.named_bodies:Dict[str, Body] = {}
 
     def step(self, dt:float=None)->None:
         dt = dt or (time.time() - self.last_step_time)
         self.last_step_time = time.time()
         self.space.step(dt)
 
-    def add(self, body:Body)->None:
+    def add(self, body:Body, name=None)->None:
         self.space.add(body.shape, body.body)
+        if name is not None:
+            self.named_bodies[name] = body
 
     def create_boundry(self, width=100, friction:float=0.0, elasticity:float=1.0, collision_type:int=None)->None:
         xmax, ymax = self.xmax, self.ymax
@@ -83,6 +86,7 @@ class World:
 
     def end(self):
         self.collision_handlers.clear()
+        self.named_bodies.clear()
         self.space = None
 
     def get_total_momentum(self):

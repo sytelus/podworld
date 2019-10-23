@@ -3,8 +3,21 @@ import platform
 import numpy as np
 import pygame
 import pymunk.pygame_util
-
+from typing import Tuple
 from ..physics.world import World
+
+class RenderInfo:
+    def __init__(self, world:World, last_observation:np.ndarray, 
+        episod_reward:float, total_momentum:float, action:int, reward:float,
+        thrust_pt:Tuple[float, float])->None:
+
+        self.world = world
+        self.last_observation = last_observation
+        self.episod_reward = episod_reward
+        self.total_momentum = total_momentum
+        self.action = action
+        self.reward = reward   
+        self.thrust_pt = thrust_pt
 
 class Renderer:
     def __init__(self, viewport_size:tuple=None, human_mode_fps=60, info_height=None)->None:
@@ -29,15 +42,15 @@ class Renderer:
             self.clock = pygame.time.Clock()
             self.font = pygame.font.Font(pygame.font.get_default_font(), 36)
 
-    def render(self, world:World, last_observation:np.ndarray, episod_reward:float, 
-        total_momentum:float, mode='human')->np.ndarray:
-
-        self._init_lazy_render(world)
+    def render(self, render_info:RenderInfo, mode='human')->np.ndarray:
+        self._init_lazy_render(render_info.world)
         self._handle_player_events()
         if self.exited:
             return None        
-        self._draw_world(world)
-        self._draw_info(last_observation, episod_reward, total_momentum)
+        self._draw_world(render_info.world)
+        self._draw_info(render_info.last_observation, 
+            render_info.episod_reward, render_info.total_momentum)
+        self._draw_debug(render_info)
 
         ret:np.ndarray = None
         if mode == 'human':
@@ -48,6 +61,28 @@ class Renderer:
             ret = np.flipud(np.rot90(pygame.surfarray.array3d(pygame.display.get_surface())))
 
         return ret
+
+    def _draw_debug(self, render_info:RenderInfo)->None:
+        agent = render_info.world.named_bodies.get('agent', None)
+        if agent is not None:
+            reward_color = None
+            if render_info.reward < 0:
+                reward_color = (100, 0, 0)
+            elif render_info.reward > 0:
+                reward_color = (50, 255, 50)
+
+            pos_o = agent.body.position
+            pos = (int(pos_o[0]), 
+                    int(render_info.world.ymax-pos_o[1]+self.info_height))
+            if reward_color is not None:
+                pygame.draw.circle(self.screen, reward_color, pos, 10, 0)
+            if render_info.thrust_pt is not None:
+                t_o = list(render_info.thrust_pt)
+                t_o = np.clip(t_o, -agent.shape.radius, agent.shape.radius)
+                t_w = pos_o[0]+t_o[0], pos_o[1]+t_o[1]
+                t = int(t_w[0]), int(render_info.world.ymax-t_w[1]+self.info_height)
+                pygame.draw.line(self.screen, (100,100,255), 
+                    pos, t, 10)
 
     def _handle_player_events(self)->None:
         self.last_mapped_key = None

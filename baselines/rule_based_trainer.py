@@ -21,7 +21,7 @@ class RuleBasedAgent(BaseAgent):
 
         self.weights = np.array([
             math.pow(RuleBasedAgent.gamma, 
-                i-self.pixel_count if i >= self.pixel_count/2 else -i) \
+                self.pixel_count-i if i >= self.pixel_count/2 else i) \
                     for i in range(self.pixel_count)])
 
     def act(self, observation, reward, done):
@@ -32,7 +32,7 @@ class RuleBasedAgent(BaseAgent):
         obj_ranks_conv_normed = obj_ranks_conv * 100.0 / (np.linalg.norm(obj_ranks_conv) + 1e-16)
         probabilities = softmax(-obj_ranks_conv_normed)
         goal_direction = np.random.choice(len(probabilities), p=probabilities)
-        thrust_direction = goal_direction #(self.pixel_count/2 + goal_direction) % self.pixel_count
+        thrust_direction = (self.pixel_count/2 + goal_direction) % self.pixel_count
         action_val = int(self.pix2act * thrust_direction) + 1
         return action_val
 

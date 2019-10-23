@@ -1,7 +1,7 @@
 import gym
 from gym import spaces, utils
 
-from ..render.renderer import Renderer 
+from ..render.renderer import Renderer, RenderInfo 
 from ..physics.world import Body
 from ..physics.world import World
 from ..physics.box_body import BoxBody
@@ -35,7 +35,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         agent_ray_count=64, agent_actuator_count=16,
         obs_start_angle=0, obs_end_angle=2 * math.pi, obs_mode=World.OBS_MODE_RGB,
         act_start_angle=0, act_end_angle=2 * math.pi,
-        action_strength=1000.0, friction=0.3, elasticity=0.7,
+        action_strength=2000.0, friction=0.1, elasticity=0.7,
         food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0,
         max_steps=2**31-1, reward_factor=1.0)->None:
 
@@ -46,6 +46,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.eaten_foods = None
         self.step_reward, self.episod_reward, self.step_count = None, None, None
         self.initial_total_momentum, self.last_total_momentum = None, None
+        self.last_thrust, self.last_action = None, None
 
         
         self.food_count, self.obs_count, self.xmax, self.ymax = food_count, obs_count, xmax, ymax
@@ -128,7 +129,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
             angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_AGENT,
             radius=self.agent_radius, rgba_color=(224, 23, 33,255), category_mask=self._agent_mask, 
             friction=self.friction, elasticity=self.elasticity)
-        self.world.add(self.agent)
+        self.world.add(self.agent, name='agent')
 
         self._update_observation()
         return self.last_observation
@@ -141,8 +142,10 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
 
     def step(self, action):
         # perform action
+        self.last_thrust = None
         if action > 0:
-            self.agent.apply_impulse(self._action_pts[action-1], (0,0))
+            self.last_thrust = self._action_pts[action-1]
+            self.agent.apply_impulse(self.last_thrust, (0,0))
 
         self.world.step(1.0/self.renderer.human_mode_fps)
 
@@ -154,6 +157,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         reward = self.step_reward
         self.step_reward = 0.0
         self.step_count += 1
+        self.last_action = action
 
         if self.step_count % 100 == 0:
             self._regrow_food()
@@ -171,13 +175,16 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         if arbiter.shapes:
             for shape in arbiter.shapes:
                 if shape.collision_type == PodWorldEnv.OBJ_TYPE_ROCK:
-                    self._add_step_reward(-shape.body.mass * shape.body.velocity.get_length() / 100.0)
+                    self._add_step_reward( \
+                        -shape.body.mass * shape.body.velocity.get_length() / 100.0)
 
         return True
     def _on_agent_food_collision(self, arbiter, space, data)->bool:
         if arbiter.shapes:
             for shape in arbiter.shapes:
-                if shape.collision_type == PodWorldEnv.OBJ_TYPE_FOOD and shape not in self.eaten_foods:
+                if shape.collision_type == PodWorldEnv.OBJ_TYPE_FOOD and \
+                    shape not in self.eaten_foods:
+
                     self._add_step_reward(shape.body.mass)
                     self._set_eaten_status(shape, True)              
 
@@ -205,7 +212,9 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.step_reward += reward
 
     def render(self, mode='human'):
-        self.renderer.render(self.world, self.last_observation, self.episod_reward, self.last_total_momentum, mode=mode)
+        render_info = RenderInfo(self.world, self.last_observation, self.episod_reward, 
+            self.last_total_momentum, self.last_action, self.step_reward, self.last_thrust)
+        self.renderer.render(render_info, mode=mode)
 
     def close(self):
         self.obss, self.foods = [], []
@@ -216,11 +225,11 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
     def _get_random_circle_radius(self)->float:
         return max(5.0, abs(random.normalvariate(self.circle_radius, self.circle_radius/2)))
 
-    def _get_random_box_size(self)->float:
+    def _get_random_box_size(self)->Tuple[float,float]:
         return (max(5.0, abs(random.normalvariate(self.box_size[0], self.box_size[0]/2))),
             max(5.0, abs(random.normalvariate(self.box_size[1], self.box_size[1]/2))))
 
-    def _get_random_bar_size(self)->float:
+    def _get_random_bar_size(self)->Tuple[float,float]:
         return (max(10.0, abs(random.normalvariate(self.bar_size[0], self.bar_size[0]/4))),
             max(10.0, abs(random.normalvariate(self.bar_size[1], self.bar_size[1]/8))))
 
