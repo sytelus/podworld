@@ -12,6 +12,7 @@ import math
 import sys
 import numpy as np
 from typing import Iterator, Tuple
+from gym.envs.registration import register
 
 class PodWorldEnv(gym.Env, utils.EzPickle):
     metadata = {'render.modes': ['human', 'rgb_array'],
@@ -82,7 +83,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.step_reward, self.episod_reward, self.step_count = 0.0, 0.0, 0
         if self.world:
             self.world.end()
-        self.world = World(xmax=self.xmax, ymax=self.ymax)
+        self.world = World(name='PodWorld', xmax=self.xmax, ymax=self.ymax)
         self.world.create_boundry(collision_type=PodWorldEnv.OBJ_TYPE_WALL)
         self.world.set_collision_callback(PodWorldEnv.OBJ_TYPE_AGENT, PodWorldEnv.OBJ_TYPE_FOOD, 
             self._on_agent_food_collision)
@@ -215,10 +216,11 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         render_info = RenderInfo(self.world, self.last_observation, self.episod_reward, 
             self.last_total_momentum, self.last_action, self.step_reward, self.last_thrust,
             self._obs_local_pts, self.sensor_probs, self.agent_obs_length)
-        self.renderer.render(render_info, mode=mode)
+        return self.renderer.render(render_info, mode=mode)
 
     def close(self):
         self.obss, self.foods = [], []
+        self.render.close()
         if self.world:
             self.world.end()
         self.world = None
@@ -255,4 +257,8 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
                 obj._apply_gaussian_impulse(obj.size, obj.mass, obj.mass*100)
                 obj = random.choice(self.obss)
                 obj._apply_gaussian_impulse((obj.radius, obj.radius), obj.mass, obj.mass*100)
+
+    def get_action_meanings(self):
+        return ['No Thrust' if i==0 else 'Activate thruster {}'.format(i) \
+             for i in range(self.action_space.n)]                
 

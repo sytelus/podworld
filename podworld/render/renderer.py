@@ -2,6 +2,7 @@ import sys
 import platform
 import numpy as np
 import pygame
+import os
 import pymunk.pygame_util
 from typing import Tuple
 from ..physics.world import World
@@ -32,8 +33,12 @@ class Renderer:
         self.key_map = {pygame.K_RIGHT:1, pygame.K_UP:0, pygame.K_LEFT:3, pygame.K_DOWN:2}
         self.last_mapped_key:int = None
 
-    def _init_lazy_render(self, world:World):
+    def _init_lazy_render(self, world:World, mode):
         if not self.screen:
+            if mode != 'human':
+                # set SDL to use the dummy NULL video driver, 
+                # so it doesn't need a windowing system.
+                os.environ["SDL_VIDEODRIVER"] = "dummy"
             if platform.system() == 'Windows':
                 # don't scale window size for DPI scaling
                 import ctypes
@@ -44,9 +49,10 @@ class Renderer:
             self.screen = pygame.display.set_mode(self.viewport_size)
             self.clock = pygame.time.Clock()
             self.font = pygame.font.Font(pygame.font.get_default_font(), 36)
+            pygame.display.set_caption('{}'.format(world.name or 'PyGame World'))
 
     def render(self, render_info:RenderInfo, mode='human')->np.ndarray:
-        self._init_lazy_render(render_info.world)
+        self._init_lazy_render(render_info.world, mode)
         self._handle_player_events()
         if self.exited:
             return None        
@@ -56,12 +62,13 @@ class Renderer:
         self._draw_debug(render_info)
 
         ret:np.ndarray = None
+        pygame.display.flip()
+        ret = np.flipud(np.rot90(pygame.surfarray.array3d(pygame.display.get_surface())))
+
         if mode == 'human':
-            pygame.display.flip()
             self.clock.tick(self.human_mode_fps)
         else:
             self.clock.tick() # don't introduce additional delay for human vision
-            ret = np.flipud(np.rot90(pygame.surfarray.array3d(pygame.display.get_surface())))
 
         return ret
 
@@ -127,7 +134,8 @@ class Renderer:
         self.screen.fill(pygame.color.THECOLORS['white'], 
             pygame.rect.Rect(0, 0, width, self.info_height))
 
-        info_text = 'Reward: {:.2f}                                    Global Energy: {:.2f}'.format(episod_reward, total_momentum)
+        info_text = 'Reward: {:.2f}                                    Global Energy: {:.2f}' \
+            .format(episod_reward or 0.0, total_momentum or 0.0)
         text_surface = self.font.render(info_text, True, (0, 0, 0))
         self.screen.blit(text_surface, (0,0)) 
 
@@ -143,3 +151,8 @@ class Renderer:
         options = pymunk.pygame_util.DrawOptions(self.screen)
         options.positive_y_is_up = False
         world.space.debug_draw(options)
+
+    def close(self):
+        if self.screen:
+            pygame.display.quit()
+            self.screen = None

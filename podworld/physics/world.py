@@ -10,8 +10,9 @@ class World:
     OBS_MODE_RGBD='RGBD'
     OBS_MODE_RGBAD='RGBAD'
 
-    def __init__(self, xmax:int, ymax:int, gravityx:float=0.0, gravityy:float=0.0)->None:
+    def __init__(self, name:str, xmax:int, ymax:int, gravityx:float=0.0, gravityy:float=0.0)->None:
         # pymonk has origin on left bottom
+        self.name = name
         self.xmax, self.ymax = xmax, ymax
         self.space = pymunk.Space()
         self.space.gravity = gravityx, gravityy
