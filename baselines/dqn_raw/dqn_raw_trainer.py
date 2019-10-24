@@ -165,15 +165,14 @@ def deep_q_learning(sess,
                 print("\nCopied model parameters to target network.")
 
             # Print out which step we're on, useful for debugging.
-            print("\rStep {} ({}) @ Episode {}/{}, loss: {}".format(
-                    t, total_t, i_episode + 1, num_episodes, loss), end="")
-            sys.stdout.flush()
+            # print("\rStep {} ({}) @ Episode {}/{}, loss: {}".format(
+            #         t, total_t, i_episode + 1, num_episodes, loss), end="")
+            # sys.stdout.flush()
 
             # Take a step
             action_probs = policy(sess, state, epsilon)
             action = np.random.choice(np.arange(len(action_probs)), p=action_probs)
             next_state, reward, done, _ = env.step(action)
-            next_state = np.append(state[:,:,1:], np.expand_dims(next_state, 2), axis=2)
 
             # If our replay memory is full, pop the first element
             if len(replay_memory) == replay_memory_size:
@@ -220,7 +219,7 @@ def deep_q_learning(sess,
 
     return stats
 
-env = gym.envs.make("podworld-v0")
+env = gym.envs.make("podworld-v0", max_steps=10000, seed=None)
 
 tf.reset_default_graph()
 
@@ -231,8 +230,8 @@ experiment_dir = os.path.abspath("./experiments/{}".format(env.spec.id))
 global_step = tf.Variable(0, name='global_step', trainable=False)
     
 # Create estimators
-q_estimator = Estimator(env.action_space.n, scope="q_estimator", summaries_dir=experiment_dir)
-target_estimator = Estimator(env.action_space.n, scope="target_q")
+q_estimator = Estimator(env.agent_ray_count, env.action_space.n, scope="q_estimator", summaries_dir=experiment_dir)
+target_estimator = Estimator(env.agent_ray_count, env.action_space.n, scope="target_q")
 
 # Run it!
 with tf.Session() as sess:

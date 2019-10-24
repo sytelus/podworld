@@ -40,7 +40,8 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0,
         max_steps=2**31-1, reward_factor=1.0)->None:
 
-        self.seed(seed)
+        if seed is not None:
+            self.seed(seed)
 
         self.obss, self.foods, self.bars, self.agent, self.world = \
             None, None, None, None, None
@@ -252,7 +253,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         else:
             decrease = self.initial_total_momentum - self.last_total_momentum
             if decrease > 0:
-                print('decreased momentum', decrease)
+                # print('decreased momentum', decrease)
                 obj = random.choice(self.foods)
                 obj._apply_gaussian_impulse(obj.size, obj.mass, obj.mass*100)
                 obj = random.choice(self.obss)

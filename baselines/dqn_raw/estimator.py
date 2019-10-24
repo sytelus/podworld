@@ -8,27 +8,27 @@ class Estimator():
     This network is used for both the Q-Network and the Target Network.
     """
 
-    def __init__(self, action_count:int, scope="estimator", summaries_dir=None):
+    def __init__(self, pixel_count:int, action_count:int, scope="estimator", summaries_dir=None):
         self.scope = scope
         # Writes Tensorboard summaries to disk
         self.summary_writer = None
         with tf.variable_scope(scope):
             # Build the graph
-            self._build_model(action_count)
+            self._build_model(action_count, pixel_count)
             if summaries_dir:
                 summary_dir = os.path.join(summaries_dir, "summaries_{}".format(scope))
                 if not os.path.exists(summary_dir):
                     os.makedirs(summary_dir)
                 self.summary_writer = tf.summary.FileWriter(summary_dir)
 
-    def _build_model(self, action_count:int):
+    def _build_model(self, action_count:int, pixel_count:int):
         """
         Builds the Tensorflow graph.
         """
 
         # Placeholders for our input
         # Our input are 4 grayscale frames of shape 84, 84 each
-        self.X_pl = tf.placeholder(shape=[None, 84, 84, 4], dtype=tf.uint8, name="X")
+        self.X_pl = tf.placeholder(shape=[None, 1, pixel_count, 3], dtype=tf.uint8, name="X")
         # The TD target value
         self.y_pl = tf.placeholder(shape=[None], dtype=tf.float32, name="y")
         # Integer id of which action was selected
