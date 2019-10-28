@@ -252,7 +252,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         else:
             decrease = self.initial_total_momentum - self.last_total_momentum
             if decrease > 0:
-                print('decreased momentum', decrease)
+                #print('decreased momentum', decrease)
                 obj = random.choice(self.foods)
                 obj._apply_gaussian_impulse(obj.size, obj.mass, obj.mass*100)
                 obj = random.choice(self.obss)
