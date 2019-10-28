@@ -220,7 +220,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
 
     def close(self):
         self.obss, self.foods = [], []
-        self.render.close()
+        self.renderer.close()
         if self.world:
             self.world.end()
         self.world = None
