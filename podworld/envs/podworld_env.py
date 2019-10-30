@@ -29,16 +29,19 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
     OBS_COLOR = (162, 110, 180,255)
     NOOBJ_COLOR = (0,0,0,0)
 
-    def __init__(self, food_count=10, obs_count=30, xmax=2560, ymax=1440, seed=42,
-        box_size=(40.0, 40.0), circle_radius=30.0, box_mass=1.0, circle_mass=1.0,
-        bar_count=4, bar_size=(900.0,40.0), bar_mass=10.0, 
-        agent_radius=40.0, agent_mass=100.0, agent_obs_length=200.0, 
-        agent_ray_count=64, agent_actuator_count=16,
+    def __init__(self, 
+        food_count=10, obs_count=30, bar_count=4, 
+        xmax=2560, ymax=1440, 
+        seed=42, max_steps=2**31-1, reward_factor=1.0,
+        box_size=(40.0, 40.0), box_mass=1.0, 
+        circle_radius=30.0, circle_mass=1.0, 
+        bar_size=(900.0,40.0), bar_mass=10.0, 
+        agent_radius=40.0, agent_mass=100.0, 
+        agent_obs_length=200.0, agent_ray_count=64, 
         obs_start_angle=0, obs_end_angle=2 * math.pi, obs_mode=World.OBS_MODE_RGB,
-        act_start_angle=0, act_end_angle=2 * math.pi,
-        action_strength=2000.0, friction=0.1, elasticity=0.7,
-        food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0,
-        max_steps=2**31-1, reward_factor=1.0)->None:
+        agent_actuator_count=16, act_start_angle=0, act_end_angle=2 * math.pi, action_strength=2000.0, 
+        friction=0.1, elasticity=0.7,
+        food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0)->None:
 
         self.seed(seed)
 
@@ -65,7 +68,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.max_steps, self.reward_factor = max_steps, reward_factor
 
         self.action_space = spaces.Discrete(agent_actuator_count+1) # directions clockwise, action 0 is no op
-        self.observation_space = spaces.Box(low=0, high=255, shape=(1, agent_ray_count, 3), dtype=np.uint8)
+        self.observation_space = spaces.Box(low=0, high=255, shape=(1, agent_ray_count, World.get_channel_count(obs_mode)), dtype=np.uint8)
 
         self._obs_local_pts = list(self._get_pts_on_circle(
             self.observation_space.shape[1], self.agent_obs_length, obs_start_angle, obs_end_angle))
@@ -170,6 +173,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
     def _update_observation(self)->None:
         pixels = list(self.world.get_observations(
             self.agent, self._obs_local_pts, self._agent_filter, self.obs_mode))
+        # shape: (w,c) -> (1,w,c)
         self.last_observation = np.expand_dims(np.array(pixels, dtype=np.uint8), axis=0)
 
     def _on_agent_rock_collision(self, arbiter, space, data)->bool:
