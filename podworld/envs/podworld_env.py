@@ -37,6 +37,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         circle_radius=30.0, circle_mass=1.0, 
         bar_size=(900.0,40.0), bar_mass=10.0, 
         agent_radius=40.0, agent_mass=100.0, 
+        # for Atari mode, set agent_ray_count=160, agent_obs_height=210
         agent_obs_length=200.0, agent_ray_count=64, agent_obs_height=1,
         obs_start_angle=0, obs_end_angle=2 * math.pi, obs_mode=World.OBS_MODE_RGB,
         agent_actuator_count=16, act_start_angle=0, act_end_angle=2 * math.pi, action_strength=2000.0, 

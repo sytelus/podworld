@@ -25,4 +25,5 @@ def run_episode(env:gym.Env, agent:BaseAgent, render=False):
         i += 1
 
     print('Done: reward, time', total_r, time.time() - start_time)
+    return total_r
 
