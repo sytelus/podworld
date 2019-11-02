@@ -13,7 +13,7 @@ Installing from source is recommended (pypi package may not be latest).
 ```
 git clone https://github.com/sytelus/podworld.git
 cd podworld
-pip install . -e
+pip install -e .
 ```
 
 ### Package install
