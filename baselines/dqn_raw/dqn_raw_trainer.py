@@ -219,7 +219,7 @@ def deep_q_learning(sess,
 
     return stats
 
-env = gym.envs.make("podworld-v0", max_steps=10000, seed=None)
+env = gym.envs.make("podworld-v0", max_steps=1000, seed=None, obs2d=False)
 
 tf.reset_default_graph()
 
@@ -249,6 +249,6 @@ with tf.Session() as sess:
                                     epsilon_end=0.1,
                                     epsilon_decay_steps=500000,
                                     discount_factor=0.99,
-                                    batch_size=32):
+                                    batch_size=64):
 
         print("\nEpisode Reward: {}".format(stats.episode_rewards[-1]))

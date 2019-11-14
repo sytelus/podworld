@@ -38,7 +38,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         act_start_angle=0, act_end_angle=2 * math.pi,
         action_strength=2000.0, friction=0.1, elasticity=0.7,
         food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0,
-        max_steps=2**31-1, reward_factor=1.0)->None:
+        max_steps=2**31-1, reward_factor=1.0, obs2d=True)->None:
 
         if seed is not None:
             self.seed(seed)
@@ -58,7 +58,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.agent_ray_count, self.action_strength = agent_ray_count, action_strength
         self.agent_actuator_count = agent_actuator_count
         self.obs_start_angle, self.obs_end_angle = obs_start_angle, obs_end_angle
-        self.obs_mode = obs_mode
+        self.obs_mode, self.obs2d = obs_mode, obs2d
         self.act_start_angle, self.act_end_angle = act_start_angle, act_end_angle
         self.friction, self.elasticity = friction, elasticity
         self.food_impulse, self.obs_impulse, self.bar_impulse, self.init_impulse_factor = \
@@ -172,6 +172,8 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         pixels = list(self.world.get_observations(
             self.agent, self._obs_local_pts, self._agent_filter, self.obs_mode))
         self.last_observation = np.expand_dims(np.array(pixels, dtype=np.uint8), axis=0)
+        if not self.obs2d:
+            self.last_observation = np.squeeze(self.last_observation, axis=0)
 
     def _on_agent_rock_collision(self, arbiter, space, data)->bool:
         if arbiter.shapes:
