@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": "."
+		},
+		{
+			"path": "/home/shitals/GitHubSrc/ray"
+		},
+		{
+			"path": "/home/shitals/GitHubSrc/rl-experiments/atari-dqn"
+		}
+	],
+	"settings": {}
+}

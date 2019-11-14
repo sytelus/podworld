@@ -1,4 +1,4 @@
-from typing import Iterator, Callable, Any, Dict
+from typing import Iterable, Callable, Any, Dict, Union, Sequence, Iterator
 import pymunk
 import time
 import numpy as np
@@ -9,6 +9,7 @@ class World:
     OBS_MODE_RGBA='RGBA'
     OBS_MODE_RGBD='RGBD'
     OBS_MODE_RGBAD='RGBAD'
+    OBS_MODE_R='R'
 
     def __init__(self, name:str, xmax:int, ymax:int, gravityx:float=0.0, gravityy:float=0.0)->None:
         # pymonk has origin on left bottom
@@ -52,7 +53,7 @@ class World:
         return pymunk.ShapeFilter(mask=pymunk.ShapeFilter.ALL_MASKS ^ value)
 
     # for each pixel, return RGBA tuple
-    def get_observations(self, body:Body, local_pts:Iterator[tuple], 
+    def get_observations(self, body:Body, local_pts:Iterable[tuple], 
         filter:pymunk.ShapeFilter, obs_mode=OBS_MODE_RGB)->Iterator[tuple]:
 
         start_pt = body.body.position
@@ -64,9 +65,12 @@ class World:
                 color = result.shape.color
                 pos = result.shape.body.position
 
+            if obs_mode == World.OBS_MODE_R:
+                color = (color[0],)
             if obs_mode == World.OBS_MODE_RGB or obs_mode == World.OBS_MODE_RGBD:
-                color = color[:3]
+                color = color[:3] # remove alpha
             if obs_mode == World.OBS_MODE_RGBAD or obs_mode == World.OBS_MODE_RGBD:
+                # add distance
                 dist = 1.0
                 if pos is not None:
                     dist = np.linalg.norm([body.body.position[0]-pos[0], 
@@ -74,6 +78,9 @@ class World:
                 color += (dist,)
             #TODO: check invalid modes
             yield color
+
+    def get_channel_count(obs_mode)->int:
+        return len(obs_mode)
 
     def set_collision_callback(self, collision_type_a:int, collision_type_b:int, 
         callback:Callable[[pymunk.Arbiter, pymunk.Space, Any],bool], at_begin=True)->None:
