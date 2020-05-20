@@ -8,7 +8,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="podworld",
-    version="0.2.0",
+    version="0.3.0",
     author="Shital Shah",
     author_email="shitals@microsoft.com",
     description="2D partially observable dynamic world for RL experiments",
@@ -24,7 +24,7 @@ setuptools.setup(
     ),
     include_package_data=True,
     install_requires=[
-          'pymunk', 'pygame', 'numpy', 'gym', 
+          'pymunk', 'pygame', 'numpy', 'gym',
           'tensorwatch' # optional, only if test code/baselines are used
     ]
 )
