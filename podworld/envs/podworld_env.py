@@ -1,7 +1,7 @@
 import gym
 from gym import spaces, utils
 
-from ..render.renderer import Renderer, RenderInfo 
+from ..render.renderer import Renderer, RenderInfo
 from ..physics.world import Body
 from ..physics.world import World
 from ..physics.box_body import BoxBody
@@ -18,31 +18,41 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
     metadata = {'render.modes': ['human', 'rgb_array'],
                 'video.frames_per_second': 60} #TODO: support 'ansi'
 
-    OBJ_TYPE_ROCK = 1
+    OBJ_TYPE_AGENT = 0
+    OBJ_TYPE_ROCK = 1 # obstacles to avoid
     OBJ_TYPE_FOOD = 2
     OBJ_TYPE_BAR = 3
-    OBJ_TYPE_WALL = 4
-    OBJ_TYPE_AGENT = 0
+    OBJ_TYPE_WALL = 4 # outer walls of the environment
 
     EATEN_FOOD_COLOR = (194, 199, 190, 255)
     AVAIL_FOOD_COLOR = (74, 198, 73, 255)
-    OBS_COLOR = (162, 110, 180,255)
-    NOOBJ_COLOR = (0,0,0,0)
+    OBS_COLOR = (162, 110, 180,255) # obstacle color
+    NOOBJ_COLOR = (0,0,0,0) # empty space color
 
-    def __init__(self, 
-        food_count=10, obs_count=30, bar_count=4, 
-        xmax=2560, ymax=1440, 
-        seed=42, max_steps=2**31-1, reward_factor=1.0,
-        box_size=(40.0, 40.0), box_mass=1.0, 
-        circle_radius=30.0, circle_mass=1.0, 
-        bar_size=(900.0,40.0), bar_mass=10.0, 
-        agent_radius=40.0, agent_mass=100.0, 
+    def __init__(self,
+        food_count=10, obs_count=30, bar_count=4,
+        xmax=2560, ymax=1440, # size of rendered world in pixels
+        seed=42, max_steps=2**31-1, # after these many steps episod ends
+        # original rewards are physics based and get too large
+        # so this factor can reduce reward
+        reward_factor=1.0,
+        box_size=(40.0, 40.0), # size of physics world
+        box_mass=1.0,
+        circle_radius=30.0, circle_mass=1.0, # specs for circular objects
+        bar_size=(900.0,40.0), bar_mass=10.0,
+        agent_radius=40.0, agent_mass=100.0, # make agent object slighly larger and heavier
         # for Atari mode, set agent_ray_count=160, agent_obs_height=210
         agent_obs_length=200.0, agent_ray_count=64, agent_obs_height=1,
+        # start and end angles where the cameras will be placed on agent
         obs_start_angle=0, obs_end_angle=2 * math.pi, obs_mode=World.OBS_MODE_RGB,
-        agent_actuator_count=16, act_start_angle=0, act_end_angle=2 * math.pi, action_strength=2000.0, 
+        # actuator count, start and end angles where actuators are placed on agent
+        # action_strength determines impulse power when actuator is activated
+        agent_actuator_count=16, act_start_angle=0, act_end_angle=2 * math.pi, action_strength=2000.0,
         friction=0.1, elasticity=0.7,
-        food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0, init_impulse_factor=1.0)->None:
+        food_impulse=10.0, obs_impulse=10.0, bar_impulse=2.0,
+        init_impulse_factor=1.0)->None:
+
+
 
         if seed is not None:
             self.seed(seed)
@@ -54,7 +64,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.initial_total_momentum, self.last_total_momentum = None, None
         self.last_thrust, self.last_action, self.sensor_probs = None, None, None
 
-        
+
         self.food_count, self.obs_count, self.xmax, self.ymax = food_count, obs_count, xmax, ymax
         self.box_size, self.circle_radius, self.box_mass, self.circle_mass = box_size, circle_radius, box_mass, circle_mass
         self.bar_count, self.bar_size, self.bar_mass = bar_count, bar_size, bar_mass
@@ -63,7 +73,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.agent_ray_count, self.action_strength = agent_ray_count, action_strength
         self.agent_actuator_count = agent_actuator_count
         self.obs_start_angle, self.obs_end_angle = obs_start_angle, obs_end_angle
-        self.obs_mode, self.obs2d = obs_mode, obs2d
+        self.obs_mode = obs_mode
         self.act_start_angle, self.act_end_angle = act_start_angle, act_end_angle
         self.friction, self.elasticity = friction, elasticity
         self.food_impulse, self.obs_impulse, self.bar_impulse, self.init_impulse_factor = \
@@ -71,7 +81,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.max_steps, self.reward_factor = max_steps, reward_factor
 
         self.action_space = spaces.Discrete(agent_actuator_count+1) # directions clockwise, action 0 is no op
-        self.observation_space = spaces.Box(low=0, high=255, 
+        self.observation_space = spaces.Box(low=0, high=255,
             shape=(self.agent_obs_height, agent_ray_count, World.get_channel_count(obs_mode)), dtype=np.uint8)
 
         self._obs_local_pts = list(self._get_pts_on_circle(
@@ -92,50 +102,50 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
             self.world.end()
         self.world = World(name='PodWorld', xmax=self.xmax, ymax=self.ymax)
         self.world.create_boundry(collision_type=PodWorldEnv.OBJ_TYPE_WALL)
-        self.world.set_collision_callback(PodWorldEnv.OBJ_TYPE_AGENT, PodWorldEnv.OBJ_TYPE_FOOD, 
+        self.world.set_collision_callback(PodWorldEnv.OBJ_TYPE_AGENT, PodWorldEnv.OBJ_TYPE_FOOD,
             self._on_agent_food_collision)
-        self.world.set_collision_callback(PodWorldEnv.OBJ_TYPE_AGENT, PodWorldEnv.OBJ_TYPE_ROCK, 
+        self.world.set_collision_callback(PodWorldEnv.OBJ_TYPE_AGENT, PodWorldEnv.OBJ_TYPE_ROCK,
             self._on_agent_rock_collision)
         self.initial_total_momentum, self.last_total_momentum = None, None
 
         for _ in range(self.obs_count):
             radius = self._get_random_circle_radius()
-            obj = CircleBody(mass=self.circle_mass * radius * radius, 
+            obj = CircleBody(mass=self.circle_mass * radius * radius,
                 position=self._get_random_position(clearance=10),
                 angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_ROCK,
-                radius=radius, rgba_color=PodWorldEnv.OBS_COLOR, 
+                radius=radius, rgba_color=PodWorldEnv.OBS_COLOR,
                 friction=self.friction, elasticity=self.elasticity)
             self.world.add(obj)
-            self.obss.append(obj)            
+            self.obss.append(obj)
             obj._apply_gaussian_impulse((radius, radius), obj.mass, obj.mass*self.obs_impulse*self.init_impulse_factor)
         for _ in range(self.food_count):
             box_size = self._get_random_box_size()
             mass = self.box_mass * box_size[0] * box_size[1]
-            obj = BoxBody(mass=mass, 
+            obj = BoxBody(mass=mass,
                 position=self._get_random_position(clearance=10),
                 angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_FOOD,
-                size=box_size, corner_radius=1.0, rgba_color=PodWorldEnv.AVAIL_FOOD_COLOR, 
+                size=box_size, corner_radius=1.0, rgba_color=PodWorldEnv.AVAIL_FOOD_COLOR,
                 friction=self.friction, elasticity=self.elasticity)
             self.world.add(obj)
             self.foods.append(obj)
             obj._apply_gaussian_impulse(box_size, obj.mass, obj.mass*self.food_impulse*self.init_impulse_factor)
         for i in range(self.bar_count):
             bar_size = self._get_random_bar_size()
-            obj = BoxBody(mass=self.bar_mass * bar_size[0] * bar_size[1], 
+            obj = BoxBody(mass=self.bar_mass * bar_size[0] * bar_size[1],
                 position=(self.xmax/(self.bar_count+1)*(i+1), random.randint(0,self.ymax)),
                 angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_BAR,
-                size=bar_size, corner_radius=1.0, rgba_color= (232, 184, 164, 255), 
+                size=bar_size, corner_radius=1.0, rgba_color= (232, 184, 164, 255),
                 friction=self.friction, elasticity=self.elasticity)
             self.world.add(obj)
             self.bars.append(obj)
             obj._apply_gaussian_impulse(bar_size, obj.mass, obj.mass*self.bar_impulse*self.init_impulse_factor)
 
         # add agent
-        self._agent_filter = World.get_filter(self._agent_mask)        
-        self.agent = CircleBody(mass=self.agent_mass, 
+        self._agent_filter = World.get_filter(self._agent_mask)
+        self.agent = CircleBody(mass=self.agent_mass,
             position=self._get_random_position(clearance=self.agent_radius),
             angle=random.random() * 2 * math.pi, collision_type=PodWorldEnv.OBJ_TYPE_AGENT,
-            radius=self.agent_radius, rgba_color=(224, 23, 33,255), category_mask=self._agent_mask, 
+            radius=self.agent_radius, rgba_color=(224, 23, 33,255), category_mask=self._agent_mask,
             friction=self.friction, elasticity=self.elasticity)
         self.world.add(self.agent, name='agent')
 
@@ -197,9 +207,9 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
                     shape not in self.eaten_foods:
 
                     self._add_step_reward(shape.body.mass)
-                    self._set_eaten_status(shape, True)              
+                    self._set_eaten_status(shape, True)
 
-        return False        
+        return False
 
     def _set_eaten_status(self, shape, is_eaten)->None:
         if is_eaten:
@@ -223,7 +233,7 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
         self.step_reward += reward
 
     def render(self, mode='human'):
-        render_info = RenderInfo(self.world, self.last_observation, self.episod_reward, 
+        render_info = RenderInfo(self.world, self.last_observation, self.episod_reward,
             self.last_total_momentum, self.last_action, self.step_reward, self.last_thrust,
             self._obs_local_pts, self.sensor_probs, self.agent_obs_length)
         return self.renderer.render(render_info, mode=mode)
@@ -270,5 +280,5 @@ class PodWorldEnv(gym.Env, utils.EzPickle):
 
     def get_action_meanings(self):
         return ['No Thrust' if i==0 else 'Activate thruster {}'.format(i) \
-             for i in range(self.action_space.n)]                
+             for i in range(self.action_space.n)]
 
